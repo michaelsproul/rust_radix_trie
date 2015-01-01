@@ -1,0 +1,9 @@
+[package]
+
+name = "rust_patricia_trie"
+version = "0.0.1"
+authors = ["Michael Sproul <micsproul@gmail.com>"]
+
+[dependencies.nibble_vec]
+
+git = "https://github.com/michaelsproul/rust_nibble_vec.git"
