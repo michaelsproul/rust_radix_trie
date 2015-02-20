@@ -3,9 +3,10 @@
 extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
+pub use keys::TrieKey;
+use keys::{match_keys, check_keys, KeyMatch};
 
-use std::fmt::Debug;
-
+mod keys;
 #[cfg(test)]
 mod test;
 
@@ -38,16 +39,6 @@ struct TrieNode<K, V> {
 struct KeyValue<K, V> {
     key: K,
     value: V
-}
-
-pub trait TrieKey: PartialEq + Eq + Debug {
-    fn encode(&self) -> Vec<u8>;
-}
-
-impl<'a> TrieKey for &'a str {
-    fn encode(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
 }
 
 impl<K, V> Trie<K, V> where K: TrieKey {
@@ -87,7 +78,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 }
 
-/// Identity macro to allow expansion of `tt` mutability item.
+/// Identity macro to allow expansion of mutability token tree.
 macro_rules! id {
     ($e:item) => { $e }
 }
@@ -143,7 +134,6 @@ macro_rules! get_function {
 
 get_function!(name: get_mut, mutability: mut);
 get_function!(name: get, mutability: );
-
 
 impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Create a node with no children.
@@ -260,39 +250,5 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 child_count: child_count
             }
         ));
-    }
-}
-
-enum KeyMatch {
-    /// The keys match up to the given index.
-    Partial(usize),
-    /// The first key is a prefix of the second.
-    FirstPrefix,
-    /// The second key is a prefix of the first.
-    SecondPrefix,
-    /// The keys match exactly.
-    Full
-}
-
-fn match_keys(first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
-    let min_length = std::cmp::min(first.len(), second.len());
-
-    for i in 0..min_length {
-        if first.get(i) != second.get(i) {
-            return KeyMatch::Partial(i);
-        }
-    }
-
-    match (first.len(), second.len()) {
-        (x, y) if x < y => KeyMatch::FirstPrefix,
-        (x, y) if x == y => KeyMatch::Full,
-        _ => KeyMatch::SecondPrefix
-    }
-}
-
-/// Check two keys for equality and panic if they differ.
-fn check_keys<K>(key1: &K, key2: &K) where K: PartialEq + Eq {
-    if *key1 != *key2 {
-        panic!("multiple-keys with the same bit representation.");
     }
 }
