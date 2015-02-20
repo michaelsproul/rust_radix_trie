@@ -1,8 +1,13 @@
-#![feature(box_syntax)]
+#![feature(box_syntax, box_patterns)]
 
 extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
+
+use std::fmt::Debug;
+
+#[cfg(test)]
+mod test;
 
 const BRANCH_FACTOR: usize = 16;
 
@@ -35,7 +40,7 @@ struct KeyValue<K, V> {
     value: V
 }
 
-pub trait TrieKey {
+pub trait TrieKey: PartialEq + Eq + Debug {
     fn encode(&self) -> Vec<u8>;
 }
 
@@ -71,8 +76,9 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.root.insert(key, value, key_fragments)
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
-        None
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        self.root.get_mut(key, key_fragments)
     }
 }
 
@@ -84,6 +90,43 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
             key_value: Some(KeyValue { key: key, value: value }),
             children: no_children![],
             child_count: 0
+        }
+    }
+
+    /// Get the value for the given key and key fragments.
+    fn get_mut(&mut self, key: &K, mut key_fragments: NibbleVec) -> Option<&mut V> {
+        let bucket = key_fragments.get(0) as usize;
+
+        match self.children[bucket] {
+            None => None,
+            Some(box ref mut existing_child) => {
+                match match_keys(&key_fragments, &existing_child.key) {
+                    KeyMatch::Full => {
+                        match existing_child.key_value {
+                            Some(ref mut kv) => {
+                                assert_eq!(&kv.key, key);
+                                Some(&mut kv.value)
+                            },
+                            None => None
+                        }
+                    },
+
+                    KeyMatch::Partial(idx) => {
+                        let new_key_fragments = key_fragments.split(idx);
+
+                        existing_child.get_mut(key, new_key_fragments)
+                    },
+
+                    KeyMatch::FirstPrefix => None,
+
+                    KeyMatch::SecondPrefix => {
+                        let prefix_length = existing_child.key.len();
+                        let new_key_fragments = key_fragments.split(prefix_length);
+
+                        existing_child.get_mut(key, new_key_fragments)
+                    }
+                }
+            }
         }
     }
 
@@ -113,36 +156,13 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                     // Split the existing node's key, insert a new child for the second half of the
                     // key and insert the new key as a new child, with the prefix stripped.
                     KeyMatch::Partial(idx) => {
-                        let existing_key_tail = existing_child.key.split(idx);
-
-                        // Take the existing key's value and children.
-                        let existing_key_value = existing_child.key_value.take();
-
-                        let mut existing_key_children = no_children![];
-
-                        for (i, child) in existing_child.children.iter_mut().enumerate() {
-                            if child.is_some() {
-                                existing_key_children[i] = child.take();
-                            }
-                        }
-
-                        let existing_key_child_count = existing_child.child_count;
-                        existing_child.child_count = 0;
-
-                        // Insert the existing key below the prefix node.
-                        let existing_key_bucket = existing_key_tail.get(0) as usize;
-                        existing_child.children[existing_key_bucket] = Some(Box::new(
-                            TrieNode {
-                                key: existing_key_tail,
-                                key_value: existing_key_value,
-                                children: existing_key_children,
-                                child_count: existing_key_child_count
-                            }
-                        ));
+                        // Split the existing child.
+                        existing_child.split(idx);
 
                         // Insert the new key below the prefix node.
                         let new_key = key_fragments.split(idx);
                         let new_key_bucket = new_key.get(0) as usize;
+
                         existing_child.children[new_key_bucket] = Some(Box::new(
                             TrieNode::new(new_key, key, value)
                         ));
@@ -150,43 +170,88 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                         None
                     }
 
-                    // Case 4: Prefix match.
+                    // Case 4: Existing key is a prefix.
                     // Strip the prefix and insert below the existing child (recurse).
-                    KeyMatch::Prefix => {
+                    KeyMatch::SecondPrefix => {
                         let prefix_length = existing_child.key.len();
                         let new_key_tail = key_fragments.split(prefix_length);
 
                         existing_child.insert(key, value, new_key_tail)
                     }
+
+                    // Case 5: Key to insert is a prefix of the existing one.
+                    // Split the existing child and place its value below the new one.
+                    KeyMatch::FirstPrefix => {
+                        existing_child.split(key_fragments.len());
+
+                        existing_child.key_value = Some(KeyValue { key: key, value: value });
+
+                        None
+                    }
                 }
             }
         }
     }
+
+    /// Split a node at a given index in its key, transforming it into a prefix node of its
+    /// previous self.
+    fn split(&mut self, idx: usize) {
+        // Extract all the parts of the suffix node, starting with the key.
+        let key = self.key.split(idx);
+
+        // Key-value.
+        let key_value = self.key_value.take();
+
+        // Children.
+        let mut children = no_children![];
+
+        for (i, child) in self.children.iter_mut().enumerate() {
+            if child.is_some() {
+                children[i] = child.take();
+            }
+        }
+
+        // Child count.
+        let child_count = self.child_count;
+        self.child_count = 1;
+
+        // Insert the collected items below what is now an empty prefix node.
+        let bucket = key.get(0) as usize;
+        self.children[bucket] = Some(Box::new(
+            TrieNode {
+                key: key,
+                key_value: key_value,
+                children: children,
+                child_count: child_count
+            }
+        ));
+    }
 }
 
 enum KeyMatch {
-    /// Partial match, containing the first index that differs.
+    /// The keys match up to the given index.
     Partial(usize),
-    Prefix,
+    /// The first key is a prefix of the second.
+    FirstPrefix,
+    /// The second key is a prefix of the first.
+    SecondPrefix,
+    /// The keys match exactly.
     Full
 }
 
 fn match_keys(first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
-    println!("matching on keys: {:?} and {:?}", first, second);
     let min_length = std::cmp::min(first.len(), second.len());
 
-    for i in range(0, min_length) {
+    for i in 0..min_length {
         if first.get(i) != second.get(i) {
             return KeyMatch::Partial(i);
         }
     }
 
-    if first.len() > second.len() {
-        KeyMatch::Prefix
-    } else if first.len() == second.len(){
-        KeyMatch::Full
-    } else {
-        unreachable!("trie invariant broken")
+    match (first.len(), second.len()) {
+        (x, y) if x < y => KeyMatch::FirstPrefix,
+        (x, y) if x == y => KeyMatch::Full,
+        _ => KeyMatch::SecondPrefix
     }
 }
 
