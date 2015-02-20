@@ -2,7 +2,7 @@ use Trie;
 
 #[test]
 fn get_and_insert() {
-    let mut trie: Trie<&'static str, u32> = Trie::new();
+    let mut trie = Trie::new();
     let data = [
         ("abcdefgh", 18),
         ("abc", 17),
@@ -14,10 +14,17 @@ fn get_and_insert() {
         trie.insert(key, val);
     }
 
-    println!("{:?}", trie);
-
     for &(key, val) in &data {
-        println!("Retrieving {:?}", key);
         assert_eq!(*trie.get_mut(&key).unwrap(), val);
     }
+
+    assert_eq!(trie.get_mut(&"nonexistant"), None);
+    assert_eq!(trie.get_mut(&"abcdef"), None);
+}
+
+#[test]
+fn insert_replace() {
+    let mut trie = Trie::new();
+    assert_eq!(trie.insert("haskell", 18), None);
+    assert_eq!(trie.insert("haskell", 36), Some(18));
 }

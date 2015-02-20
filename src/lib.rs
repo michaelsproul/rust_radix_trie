@@ -78,9 +78,72 @@ impl<K, V> Trie<K, V> where K: TrieKey {
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        self.root.get_mut(key, key_fragments)
+        get_mut(&mut self.root, key, key_fragments)
+    }
+
+    pub fn get(&mut self, key: &K) -> Option<&V> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        get(&self.root, key, key_fragments)
     }
 }
+
+/// Identity macro to allow expansion of `tt` mutability item.
+macro_rules! id {
+    ($e:item) => { $e }
+}
+
+/// Macro to parametrise over mutability in get methods.
+macro_rules! get_function {
+    (
+        name: $name:ident,
+        mutability: $($mut_:tt)*
+    ) => {
+    id!(fn $name<'a, K, V>(
+            trie: &'a $($mut_)* TrieNode<K, V>,
+            key: &K,
+            mut key_fragments: NibbleVec)
+            -> Option<&'a $($mut_)* V> where K: TrieKey {
+
+            let bucket = key_fragments.get(0) as usize;
+
+            match trie.children[bucket] {
+                None => None,
+                Some(box ref $($mut_)* existing_child) => {
+                    match match_keys(&key_fragments, &existing_child.key) {
+                        KeyMatch::Full => {
+                            match existing_child.key_value {
+                                Some(ref $($mut_)* kv) => {
+                                    assert_eq!(&kv.key, key);
+                                    Some(& $($mut_)* kv.value)
+                                },
+                                None => None
+                            }
+                        },
+
+                        KeyMatch::Partial(idx) => {
+                            let new_key_fragments = key_fragments.split(idx);
+
+                            $name(existing_child, key, new_key_fragments)
+                        },
+
+                        KeyMatch::FirstPrefix => None,
+
+                        KeyMatch::SecondPrefix => {
+                            let prefix_length = existing_child.key.len();
+                            let new_key_fragments = key_fragments.split(prefix_length);
+
+                            $name(existing_child, key, new_key_fragments)
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+get_function!(name: get_mut, mutability: mut);
+get_function!(name: get, mutability: );
+
 
 impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Create a node with no children.
@@ -90,43 +153,6 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
             key_value: Some(KeyValue { key: key, value: value }),
             children: no_children![],
             child_count: 0
-        }
-    }
-
-    /// Get the value for the given key and key fragments.
-    fn get_mut(&mut self, key: &K, mut key_fragments: NibbleVec) -> Option<&mut V> {
-        let bucket = key_fragments.get(0) as usize;
-
-        match self.children[bucket] {
-            None => None,
-            Some(box ref mut existing_child) => {
-                match match_keys(&key_fragments, &existing_child.key) {
-                    KeyMatch::Full => {
-                        match existing_child.key_value {
-                            Some(ref mut kv) => {
-                                assert_eq!(&kv.key, key);
-                                Some(&mut kv.value)
-                            },
-                            None => None
-                        }
-                    },
-
-                    KeyMatch::Partial(idx) => {
-                        let new_key_fragments = key_fragments.split(idx);
-
-                        existing_child.get_mut(key, new_key_fragments)
-                    },
-
-                    KeyMatch::FirstPrefix => None,
-
-                    KeyMatch::SecondPrefix => {
-                        let prefix_length = existing_child.key.len();
-                        let new_key_fragments = key_fragments.split(prefix_length);
-
-                        existing_child.get_mut(key, new_key_fragments)
-                    }
-                }
-            }
         }
     }
 
@@ -148,8 +174,17 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Full key match. Replace existing.
                     KeyMatch::Full => {
+                        let result = match existing_child.key_value.take() {
+                            Some(kv) => {
+                                check_keys(&kv.key, &key);
+                                Some(kv.value)
+                            },
+                            None => None
+                        };
+
                         existing_child.key_value = Some(KeyValue { key: key, value: value });
-                        None
+
+                        result
                     }
 
                     // Case 3: Partial key match.
@@ -255,3 +290,9 @@ fn match_keys(first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
     }
 }
 
+/// Check two keys for equality and panic if they differ.
+fn check_keys<K>(key1: &K, key2: &K) where K: PartialEq + Eq {
+    if *key1 != *key2 {
+        panic!("multiple-keys with the same bit representation.");
+    }
+}
