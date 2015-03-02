@@ -4,7 +4,9 @@ extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
+use std::fmt::Debug;
 use keys::{match_keys, check_keys, KeyMatch};
+use DeleteAction::*;
 
 mod keys;
 #[cfg(test)]
@@ -41,7 +43,14 @@ struct KeyValue<K, V> {
     value: V
 }
 
-impl<K, V> Trie<K, V> where K: TrieKey {
+#[derive(Debug)]
+enum DeleteAction<K, V> {
+    Replace(Box<TrieNode<K, V>>),
+    Delete,
+    DoNothing
+}
+
+impl<K, V> Trie<K, V> where K: TrieKey, V: Debug {
     pub fn new() -> Trie<K, V> {
         Trie {
             root: TrieNode {
@@ -64,7 +73,23 @@ impl<K, V> Trie<K, V> where K: TrieKey {
 
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        self.root.insert(key, value, key_fragments)
+        let result = self.root.insert(key, value, key_fragments);
+
+        if result.is_none() {
+            self.length += 1;
+        }
+
+        result
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+
+        // Use the TrieNode recursive removal function but ignore its delete action.
+        // The root can't be replaced or deleted.
+        let (result, _) = self.root.remove_recursive(key, key_fragments);
+
+        result
     }
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
@@ -135,7 +160,7 @@ macro_rules! get_function {
 get_function!(name: get_mut, mutability: mut);
 get_function!(name: get, mutability: );
 
-impl<K, V> TrieNode<K, V> where K: TrieKey {
+impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
     /// Create a node with no children.
     fn new(key_fragments: NibbleVec, key: K, value: V) -> TrieNode<K, V> {
         TrieNode {
@@ -157,6 +182,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
             // Case 1: No match. Simply insert.
             None => {
                 self.children[bucket] = Some(Box::new(TrieNode::new(key_fragments, key, value)));
+                self.child_count += 1;
                 None
             }
 
@@ -191,6 +217,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                         existing_child.children[new_key_bucket] = Some(Box::new(
                             TrieNode::new(new_key, key, value)
                         ));
+                        existing_child.child_count += 1;
 
                         None
                     }
@@ -215,6 +242,108 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                     }
                 }
             }
+        }
+    }
+
+    fn remove_recursive(&mut self, key: &K, mut key_fragments: NibbleVec)
+        -> (Option<V>, DeleteAction<K, V>) {
+
+        let bucket = key_fragments.get(0) as usize;
+
+        let (value, delete_action) = match self.children[bucket] {
+            // Case 1: Not found, nothing to remove.
+            None => return (None, DoNothing),
+
+            Some(box ref mut existing_child) => {
+                match match_keys(&key_fragments, &existing_child.key) {
+                    // Case 2: Node found.
+                    KeyMatch::Full => {
+                        match existing_child.key_value.take() {
+                            // Case 2a: Key found, pass the value up and delete the node.
+                            Some(KeyValue { key: ex_key, value }) => {
+                                check_keys(key, &ex_key);
+
+                                println!("At the bottom.");
+                                (Some(value), existing_child.delete_node())
+                            }
+
+                            // Case 2b: Key not found, nothing to remove.
+                            None => return (None, DoNothing)
+                        }
+                    }
+
+                    // Case 3: Recurse down.
+                    KeyMatch::SecondPrefix => {
+                        let prefix_length = existing_child.key.len();
+                        let new_key_tail = key_fragments.split(prefix_length);
+
+                        println!("Recursing down.");
+                        existing_child.remove_recursive(key, new_key_tail)
+                    }
+
+                    // Case 4: Not found, nothing to remove.
+                    KeyMatch::Partial(_) | KeyMatch::FirstPrefix => return (None, DoNothing)
+                }
+            }
+        };
+
+        println!("value is {:?}, delete action is {:?}", value, delete_action);
+
+        // Apply the computed delete action.
+        match delete_action {
+            Replace(node) => {
+                self.children[bucket] = Some(node);
+                (value, DoNothing)
+            }
+
+            Delete => {
+                self.children[bucket] = None;
+                self.child_count -= 1;
+
+                // The removal of a child could cause this node to be replaced or deleted.
+                (value, self.delete_node())
+            }
+
+            DoNothing => (value, DoNothing)
+        }
+    }
+
+    /// Having removed the value from a node, work out if the node itself should be deleted.
+    /// Depending on the number of children, this method does one of three things.
+    ///     0 children => return true
+    ///     1 child => compress the child into this node, return false
+    ///     2 or more children => return false
+    fn delete_node(&mut self) -> DeleteAction<K, V> {
+
+        // Helper function for getting the single child of a node.
+        fn get_child<K, V>(node: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>> {
+            for i in 0 .. BRANCH_FACTOR {
+                match node.children[i].take() {
+                    Some(child) => {
+                        node.child_count -= 1;
+                        return child;
+                    }
+                    None => ()
+                }
+            }
+            unreachable!("node with child_count 1 has no actual children");
+        }
+
+        match self.child_count {
+            0 if self.key_value.is_some() => DoNothing,
+            0 => Delete,
+            1 => {
+                let mut child = get_child(self);
+
+                // Join the child's key onto the existing one.
+                let mut new_key = self.key.clone();
+                new_key.join(&child.key);
+
+                child.key = new_key;
+
+                Replace(child)
+            }
+            _ => DoNothing
         }
     }
 
