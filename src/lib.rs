@@ -4,7 +4,6 @@ extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
-use std::fmt::Debug;
 use keys::{match_keys, check_keys, KeyMatch};
 use DeleteAction::*;
 
@@ -50,7 +49,7 @@ enum DeleteAction<K, V> {
     DoNothing
 }
 
-impl<K, V> Trie<K, V> where K: TrieKey, V: Debug {
+impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn new() -> Trie<K, V> {
         Trie {
             root: TrieNode {
@@ -71,6 +70,16 @@ impl<K, V> Trie<K, V> where K: TrieKey, V: Debug {
         self.length == 0
     }
 
+    pub fn get(&mut self, key: &K) -> Option<&V> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        get(&self.root, key, key_fragments)
+    }
+
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        get_mut(&mut self.root, key, key_fragments)
+    }
+
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         let result = self.root.insert(key, value, key_fragments);
@@ -89,17 +98,11 @@ impl<K, V> Trie<K, V> where K: TrieKey, V: Debug {
         // The root can't be replaced or deleted.
         let (result, _) = self.root.remove_recursive(key, key_fragments);
 
+        if result.is_some() {
+            self.length -= 1;
+        }
+
         result
-    }
-
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get_mut(&mut self.root, key, key_fragments)
-    }
-
-    pub fn get(&mut self, key: &K) -> Option<&V> {
-        let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get(&self.root, key, key_fragments)
     }
 }
 
@@ -160,7 +163,7 @@ macro_rules! get_function {
 get_function!(name: get_mut, mutability: mut);
 get_function!(name: get, mutability: );
 
-impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
+impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Create a node with no children.
     fn new(key_fragments: NibbleVec, key: K, value: V) -> TrieNode<K, V> {
         TrieNode {
@@ -169,6 +172,28 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
             children: no_children![],
             child_count: 0
         }
+    }
+
+    /// Add a child at the given index, assuming none exists already.
+    fn add_child(&mut self, idx: usize, node: Box<TrieNode<K, V>>) {
+        self.children[idx] = Some(node);
+        self.child_count += 1;
+    }
+
+    /// Remove a child at the given index, if it exists.
+    fn take_child(&mut self, idx: usize) -> Option<Box<TrieNode<K, V>>> {
+        self.children[idx].take().map(|node| { self.child_count -= 1; node })
+    }
+
+    /// Helper function for removing the single child of a node.
+    fn take_only_child(&mut self) -> Box<TrieNode<K, V>> {
+        for i in 0 .. BRANCH_FACTOR {
+            match self.take_child(i) {
+                Some(child) => return child,
+                None => ()
+            }
+        }
+        unreachable!("node with child_count 1 has no actual children");
     }
 
     /// Insert a given key and value below the current node.
@@ -181,8 +206,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
         match self.children[bucket] {
             // Case 1: No match. Simply insert.
             None => {
-                self.children[bucket] = Some(Box::new(TrieNode::new(key_fragments, key, value)));
-                self.child_count += 1;
+                self.add_child(bucket, Box::new(TrieNode::new(key_fragments, key, value)));
                 None
             }
 
@@ -190,13 +214,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Full key match. Replace existing.
                     KeyMatch::Full => {
-                        let result = match existing_child.key_value.take() {
-                            Some(kv) => {
-                                check_keys(&kv.key, &key);
-                                Some(kv.value)
-                            },
-                            None => None
-                        };
+                        let result = existing_child.key_value.take().map(|kv| {
+                            check_keys(&kv.key, &key);
+                            kv.value
+                        });
 
                         existing_child.key_value = Some(KeyValue { key: key, value: value });
 
@@ -214,10 +235,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
                         let new_key = key_fragments.split(idx);
                         let new_key_bucket = new_key.get(0) as usize;
 
-                        existing_child.children[new_key_bucket] = Some(Box::new(
-                            TrieNode::new(new_key, key, value)
-                        ));
-                        existing_child.child_count += 1;
+                        existing_child.add_child(
+                            new_key_bucket,
+                            Box::new(TrieNode::new(new_key, key, value))
+                        );
 
                         None
                     }
@@ -263,7 +284,6 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
                             Some(KeyValue { key: ex_key, value }) => {
                                 check_keys(key, &ex_key);
 
-                                println!("At the bottom.");
                                 (Some(value), existing_child.delete_node())
                             }
 
@@ -277,7 +297,6 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
                         let prefix_length = existing_child.key.len();
                         let new_key_tail = key_fragments.split(prefix_length);
 
-                        println!("Recursing down.");
                         existing_child.remove_recursive(key, new_key_tail)
                     }
 
@@ -287,8 +306,6 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
             }
         };
 
-        println!("value is {:?}, delete action is {:?}", value, delete_action);
-
         // Apply the computed delete action.
         match delete_action {
             Replace(node) => {
@@ -297,8 +314,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
             }
 
             Delete => {
-                self.children[bucket] = None;
-                self.child_count -= 1;
+                self.take_child(bucket);
 
                 // The removal of a child could cause this node to be replaced or deleted.
                 (value, self.delete_node())
@@ -310,30 +326,15 @@ impl<K, V> TrieNode<K, V> where K: TrieKey, V: Debug {
 
     /// Having removed the value from a node, work out if the node itself should be deleted.
     /// Depending on the number of children, this method does one of three things.
-    ///     0 children => return true
-    ///     1 child => compress the child into this node, return false
-    ///     2 or more children => return false
+    ///     0 children => Delete the node if it is valueless, otherwise DoNothing.
+    ///     1 child => Replace the current node by its child.
+    ///     2 or more children => DoNothing.
     fn delete_node(&mut self) -> DeleteAction<K, V> {
-
-        // Helper function for getting the single child of a node.
-        fn get_child<K, V>(node: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>> {
-            for i in 0 .. BRANCH_FACTOR {
-                match node.children[i].take() {
-                    Some(child) => {
-                        node.child_count -= 1;
-                        return child;
-                    }
-                    None => ()
-                }
-            }
-            unreachable!("node with child_count 1 has no actual children");
-        }
-
         match self.child_count {
             0 if self.key_value.is_some() => DoNothing,
             0 => Delete,
             1 => {
-                let mut child = get_child(self);
+                let mut child = self.take_only_child();
 
                 // Join the child's key onto the existing one.
                 let mut new_key = self.key.clone();
