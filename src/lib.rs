@@ -70,7 +70,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.length == 0
     }
 
-    pub fn get(&mut self, key: &K) -> Option<&V> {
+    pub fn get(&self, key: &K) -> Option<&V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         get(&self.root, key, key_fragments)
     }
@@ -122,6 +122,13 @@ macro_rules! get_function {
             key: &K,
             mut key_fragments: NibbleVec)
             -> Option<&'a $($mut_)* V> where K: TrieKey {
+            // Handle retrieval at the root.
+            if key_fragments.len() == 0 {
+                return match trie.key_value {
+                    Some(ref $($mut_)* kv) => Some(& $($mut_)* kv.value),
+                    None => None
+                };
+            }
 
             let bucket = key_fragments.get(0) as usize;
 
@@ -196,11 +203,32 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         unreachable!("node with child_count 1 has no actual children");
     }
 
+    /// Set the key and value of a node.
+    fn set_key_value(&mut self, key: K, value: V) {
+        self.key_value = Some(KeyValue { key: key, value: value });
+    }
+
+    /// Move the value out of a node, whilst checking that its key is as expected.
+    /// Can panic (see check_keys).
+    fn extract_value(&mut self, key: &K) -> Option<V> {
+        self.key_value.take().map(|kv| {
+            check_keys(&kv.key, key);
+            kv.value
+        })
+    }
+
     /// Insert a given key and value below the current node.
     /// Let `key_fragments` be the bits of the key which are valid for insertion *below*
     /// the current node such that the 0th element of `key_fragments` describes the bucket
     /// that this key would be inserted into.
     fn insert(&mut self, key: K, value: V, mut key_fragments: NibbleVec) -> Option<V> {
+        // Handle inserts at the root.
+        if key_fragments.len() == 0 {
+            let result = self.extract_value(&key);
+            self.set_key_value(key, value);
+            return result;
+        }
+
         let bucket = key_fragments.get(0) as usize;
 
         match self.children[bucket] {
@@ -219,7 +247,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                             kv.value
                         });
 
-                        existing_child.key_value = Some(KeyValue { key: key, value: value });
+                        existing_child.set_key_value(key, value);
 
                         result
                     }
@@ -256,8 +284,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                     // Split the existing child and place its value below the new one.
                     KeyMatch::FirstPrefix => {
                         existing_child.split(key_fragments.len());
-
-                        existing_child.key_value = Some(KeyValue { key: key, value: value });
+                        existing_child.set_key_value(key, value);
 
                         None
                     }
@@ -268,6 +295,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
 
     fn remove_recursive(&mut self, key: &K, mut key_fragments: NibbleVec)
         -> (Option<V>, DeleteAction<K, V>) {
+        // Handle removals at the root.
+        if key_fragments.len() == 0 {
+            return (self.extract_value(&key), DoNothing);
+        }
 
         let bucket = key_fragments.get(0) as usize;
 

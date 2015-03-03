@@ -1,6 +1,6 @@
 extern crate patricia_trie;
 
-use patricia_trie::{Trie, TrieKey, NibbleVec};
+use patricia_trie::Trie;
 
 fn main() {
     let mut trie = Trie::new();
