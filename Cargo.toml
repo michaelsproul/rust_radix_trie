@@ -1,6 +1,6 @@
 [package]
 
-name = "patricia_trie"
+name = "radix_trie"
 version = "0.0.1"
 authors = ["Michael Sproul <micsproul@gmail.com>"]
 

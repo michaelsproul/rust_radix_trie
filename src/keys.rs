@@ -1,13 +1,13 @@
 use std::fmt::Debug;
 use {NibbleVec};
 
-/// Trait for types which can be used to key a Patricia Trie.
+/// Trait for types which can be used to key a Radix Trie.
 ///
 /// Types that implement this trait should be convertible to a vector of bytes
 /// such that no two instances of the type convert to the same vector. This is essentially
 /// serialisation, and may be combined with some serialisation library in the future.
 ///
-/// If a type fails to implement this trait correctly, the Patricia Trie will panic upon
+/// If a type fails to implement this trait correctly, the Radix Trie will panic upon
 /// encountering a conflict. Be careful!
 pub trait TrieKey: PartialEq + Eq + Debug {
     fn encode(&self) -> Vec<u8>;

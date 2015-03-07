@@ -1,6 +1,6 @@
-extern crate patricia_trie;
+extern crate radix_trie;
 
-use patricia_trie::Trie;
+use radix_trie::Trie;
 
 fn main() {
     let mut trie = Trie::new();
