@@ -104,6 +104,13 @@ impl<K, V> Trie<K, V> where K: TrieKey {
 
         result
     }
+
+    pub fn check_integrity(&self) -> bool {
+        match self.root.check_integrity(&NibbleVec::new()) {
+            (false, _) => false,
+            (true, size) => size == self.length
+        }
+    }
 }
 
 /// Identity macro to allow expansion of mutability token tree.
@@ -242,13 +249,8 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Full key match. Replace existing.
                     KeyMatch::Full => {
-                        let result = existing_child.key_value.take().map(|kv| {
-                            check_keys(&kv.key, &key);
-                            kv.value
-                        });
-
+                        let result = existing_child.extract_value(&key);
                         existing_child.set_key_value(key, value);
-
                         result
                     }
 
@@ -368,8 +370,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 let mut child = self.take_only_child();
 
                 // Join the child's key onto the existing one.
-                let mut new_key = self.key.clone();
-                new_key.join(&child.key);
+                let new_key = self.key.clone().join(&child.key);
 
                 child.key = new_key;
 
@@ -411,5 +412,68 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 child_count: child_count
             }
         ));
+    }
+
+    /// Check that the integrity of a trie subtree (quite costly).
+    /// Return true and the size of the subtree if all checks are successful,
+    /// or false and a junk value if any test fails.
+    fn check_integrity(&self, prefix: &NibbleVec) -> (bool, usize) {
+        let mut sub_tree_size = 0;
+        let is_root = prefix.len() == 0;
+
+        // Check that no value-less, non-root nodes have only 1 child.
+        if !is_root && self.child_count == 1 && self.key_value.is_none() {
+            println!("Value-less node with a single child.");
+            return (false, sub_tree_size);
+        }
+
+        // Check that all non-root key vector's have length > 1.
+        if !is_root && self.key.len() == 0 {
+            println!("Key length is 0 at non-root node.");
+            return (false, sub_tree_size);
+        }
+
+        // Check that the child count matches the actual number of children.
+        let child_count = self.children.iter().fold(0, |acc, elem| {
+            if elem.is_some() {
+                acc + 1
+            } else {
+                acc
+            }
+        });
+
+        if child_count != self.child_count {
+            println!("Child count error, recorded: {}, actual: {}", self.child_count, child_count);
+            return (false, sub_tree_size);
+        }
+
+        // Compute the key fragments for this node, according to the trie.
+        let trie_key = prefix.clone().join(&self.key);
+
+        // Account for this node in the size check, and check its key.
+        match self.key_value {
+            Some(ref kv) => {
+                sub_tree_size += 1;
+
+                let actual_key = NibbleVec::from_byte_vec(kv.key.encode());
+
+                if trie_key != actual_key {
+                    return (false, sub_tree_size);
+                }
+            }
+            None => ()
+        }
+
+        // Recursively check children.
+        for i in 0 .. BRANCH_FACTOR {
+            if let Some(box ref child) = self.children[i] {
+                match child.check_integrity(&trie_key) {
+                    (false, _) => return (false, sub_tree_size),
+                    (true, child_size) => sub_tree_size += child_size
+                }
+            }
+        }
+
+        (true, sub_tree_size)
     }
 }

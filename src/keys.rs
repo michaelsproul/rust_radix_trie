@@ -14,6 +14,7 @@ pub trait TrieKey: PartialEq + Eq + Debug {
 }
 
 /// Key comparison result.
+#[derive(Debug)]
 pub enum KeyMatch {
     /// The keys match up to the given index.
     Partial(usize),
@@ -45,7 +46,7 @@ pub fn match_keys(first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
 /// Check two keys for equality and panic if they differ.
 pub fn check_keys<K>(key1: &K, key2: &K) where K: TrieKey {
     if *key1 != *key2 {
-        panic!("multiple-keys with the same bit representation.");
+        panic!("multiple-keys with the same bit representation.\n{:?}\n{:?}", key1, key2);
     }
 }
 
