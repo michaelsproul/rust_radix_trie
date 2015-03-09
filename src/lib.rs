@@ -22,6 +22,14 @@ macro_rules! no_children {
     ])
 }
 
+/// Tries allow collections of string-like keys to be efficiently stored and queried.
+///
+/// Any keys which share a common *prefix* are stored below a single copy of that prefix.
+/// This saves space, and also allows the longest prefix of any given key to be found.
+///
+/// You can read more about Radix Tries on [Wikipedia][radix-wiki].
+///
+/// [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
 #[derive(Debug)]
 pub struct Trie<K, V> {
     root: TrieNode<K, V>,
@@ -30,9 +38,18 @@ pub struct Trie<K, V> {
 
 #[derive(Debug)]
 struct TrieNode<K, V> {
+    /// Key fragments/bits associated with this node, such that joining the keys from all
+    /// parent nodes is equal to the bit-encoding of this node's key.
     key: NibbleVec,
+
+    /// The key and value stored at this node.
     key_value: Option<KeyValue<K, V>>,
+
+    /// The children of this node stored such that the first nibble of each child key
+    /// dictates the child's bucket.
     children: [Option<Box<TrieNode<K, V>>>; BRANCH_FACTOR],
+
+    /// The number of children which are Some rather than None.
     child_count: usize
 }
 
@@ -50,6 +67,7 @@ enum DeleteAction<K, V> {
 }
 
 impl<K, V> Trie<K, V> where K: TrieKey {
+    /// Create an empty Trie with no data.
     pub fn new() -> Trie<K, V> {
         Trie {
             root: TrieNode {
@@ -62,24 +80,29 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         }
     }
 
+    /// Fetch the number of key-value pairs stored in the Trie.
     pub fn len(&self) -> usize {
         self.length
     }
 
+    /// Determine if the Trie contains 0 key-value pairs.
     pub fn is_empty(&self) -> bool {
         self.length == 0
     }
 
+    /// Fetch a reference to the given key's corresponding value (if any).
     pub fn get(&self, key: &K) -> Option<&V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         get(&self.root, key, key_fragments)
     }
 
+    /// Fetch a mutable reference to the given key's corresponding value (if any).
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         get_mut(&mut self.root, key, key_fragments)
     }
 
+    /// Insert the given key-value pair, returning any previous value associated with the key.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         let result = self.root.insert(key, value, key_fragments);
@@ -91,6 +114,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         result
     }
 
+    /// Remove and return the value associated with the given key.
     pub fn remove(&mut self, key: &K) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
 
@@ -105,6 +129,9 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         result
     }
 
+    /// Check that the Trie invariants are satisfied - you shouldn't ever have to call this!
+    /// Quite slow!
+    #[doc(hidden)]
     pub fn check_integrity(&self) -> bool {
         match self.root.check_integrity(&NibbleVec::new()) {
             (false, _) => false,
@@ -113,7 +140,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 }
 
-/// Identity macro to allow expansion of mutability token tree.
+/// Identity macro to allow expansion of the "mutability" token tree.
 macro_rules! id {
     ($e:item) => { $e }
 }

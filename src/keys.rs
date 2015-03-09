@@ -10,6 +10,7 @@ use {NibbleVec};
 /// If a type fails to implement this trait correctly, the Radix Trie will panic upon
 /// encountering a conflict. Be careful!
 pub trait TrieKey: PartialEq + Eq + Debug {
+    /// Encode a value as a vector of bytes.
     fn encode(&self) -> Vec<u8>;
 }
 
