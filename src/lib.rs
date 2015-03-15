@@ -155,7 +155,8 @@ macro_rules! get_function {
             trie: &'a $($mut_)* TrieNode<K, V>,
             key: &K,
             mut key_fragments: NibbleVec)
-            -> Option<&'a $($mut_)* V> where K: TrieKey {
+            -> Option<&'a $($mut_)* V> where K: TrieKey
+        {
             // Handle retrieval at the root.
             if key_fragments.len() == 0 {
                 return match trie.key_value {
@@ -173,7 +174,7 @@ macro_rules! get_function {
                         KeyMatch::Full => {
                             match existing_child.key_value {
                                 Some(ref $($mut_)* kv) => {
-                                    assert_eq!(&kv.key, key);
+                                    check_keys(&kv.key, key);
                                     Some(& $($mut_)* kv.value)
                                 },
                                 None => None
