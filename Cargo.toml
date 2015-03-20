@@ -2,8 +2,17 @@
 
 name = "radix_trie"
 version = "0.0.1"
+description = "Generic radix trie data-structure."
+
+license = "MIT"
+license-file = "LICENSE"
 authors = ["Michael Sproul <micsproul@gmail.com>"]
 
-[dependencies.nibble_vec]
+repository = "https://github.com/michaelsproul/rust_radix_trie"
+documentation = "https://michaelsproul.github.io/rust_radix_trie/"
 
-git = "https://github.com/michaelsproul/rust_nibble_vec.git"
+keywords = ["trie", "patricia", "collection", "generic", "prefix"]
+
+[dependencies]
+
+nibble_vec = "*"
