@@ -442,7 +442,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         ));
     }
 
-    /// Check that the integrity of a trie subtree (quite costly).
+    /// Check the integrity of a trie subtree (quite costly).
     /// Return true and the size of the subtree if all checks are successful,
     /// or false and a junk value if any test fails.
     fn check_integrity(&self, prefix: &NibbleVec) -> (bool, usize) {

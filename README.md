@@ -6,6 +6,8 @@ Rust Radix Trie
 This is a [Radix Trie][radix-wiki] implementation in Rust, building on the lessons learnt from
 `TrieMap` and [Sequence Trie][seq-trie].
 
+You can read about my experience implementing this data structure [here][radix-paper].
+
 # Features
 
 * Compressed nodes. Common key prefixes are stored only once.
@@ -31,9 +33,10 @@ https://michaelsproul.github.io/rust_radix_trie/
 * Implement the Entry API.
 * Add iterators.
 
-[radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
-[seq-trie]: https://github.com/michaelsproul/rust-sequence-trie
-
 # License
 
 MIT License. Copyright (c) Michael Sproul 2015.
+
+[radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
+[seq-trie]: https://github.com/michaelsproul/rust-sequence-trie
+[radix-paper]: https://michaelsproul.github.io/rust_radix_paper/
