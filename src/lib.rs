@@ -1,5 +1,3 @@
-#![feature(box_syntax, box_patterns)]
-
 extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
@@ -169,7 +167,7 @@ macro_rules! get_function {
 
             match trie.children[bucket] {
                 None => None,
-                Some(box ref $($mut_)* existing_child) => {
+                Some(ref $($mut_)* existing_child) => {
                     match match_keys(&key_fragments, &existing_child.key) {
                         KeyMatch::Full => {
                             match existing_child.key_value {
@@ -184,7 +182,7 @@ macro_rules! get_function {
                         KeyMatch::Partial(idx) => {
                             let new_key_fragments = key_fragments.split(idx);
 
-                            $name(existing_child, key, new_key_fragments)
+                            $name(& $($mut_)* *existing_child, key, new_key_fragments)
                         },
 
                         KeyMatch::FirstPrefix => None,
@@ -193,7 +191,7 @@ macro_rules! get_function {
                             let prefix_length = existing_child.key.len();
                             let new_key_fragments = key_fragments.split(prefix_length);
 
-                            $name(existing_child, key, new_key_fragments)
+                            $name(& $($mut_)* *existing_child, key, new_key_fragments)
                         }
                     }
                 }
@@ -273,7 +271,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 None
             }
 
-            Some(box ref mut existing_child) => {
+            Some(ref mut existing_child) => {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Full key match. Replace existing.
                     KeyMatch::Full => {
@@ -336,7 +334,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
             // Case 1: Not found, nothing to remove.
             None => return (None, DoNothing),
 
-            Some(box ref mut existing_child) => {
+            Some(ref mut existing_child) => {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Node found.
                     KeyMatch::Full => {
@@ -494,7 +492,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
 
         // Recursively check children.
         for i in 0 .. BRANCH_FACTOR {
-            if let Some(box ref child) = self.children[i] {
+            if let Some(ref child) = self.children[i] {
                 match child.check_integrity(&trie_key) {
                     (false, _) => return (false, sub_tree_size),
                     (true, child_size) => sub_tree_size += child_size
