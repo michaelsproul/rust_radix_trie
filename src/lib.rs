@@ -41,7 +41,7 @@ struct TrieNode<K, V> {
     key: NibbleVec,
 
     /// The key and value stored at this node.
-    key_value: Option<KeyValue<K, V>>,
+    key_value: Option<Box<KeyValue<K, V>>>,
 
     /// The children of this node stored such that the first nibble of each child key
     /// dictates the child's bucket.
@@ -208,7 +208,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     fn new(key_fragments: NibbleVec, key: K, value: V) -> TrieNode<K, V> {
         TrieNode {
             key: key_fragments,
-            key_value: Some(KeyValue { key: key, value: value }),
+            key_value: Some(Box::new(KeyValue { key: key, value: value })),
             children: no_children![],
             child_count: 0
         }
@@ -238,7 +238,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
 
     /// Set the key and value of a node.
     fn set_key_value(&mut self, key: K, value: V) {
-        self.key_value = Some(KeyValue { key: key, value: value });
+        self.key_value = Some(Box::new(KeyValue { key: key, value: value }));
     }
 
     /// Move the value out of a node, whilst checking that its key is as expected.
@@ -340,10 +340,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                     KeyMatch::Full => {
                         match existing_child.key_value.take() {
                             // Case 2a: Key found, pass the value up and delete the node.
-                            Some(KeyValue { key: ex_key, value }) => {
-                                check_keys(key, &ex_key);
+                            Some(kv) => {
+                                check_keys(key, &kv.key);
 
-                                (Some(value), existing_child.delete_node())
+                                (Some(kv.value), existing_child.delete_node())
                             }
 
                             // Case 2b: Key not found, nothing to remove.
