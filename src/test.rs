@@ -12,7 +12,9 @@ fn test_trie() -> Trie<&'static str, u32> {
 
     for &(key, val) in &TEST_DATA {
         trie.insert(key, val);
+        assert!(trie.check_integrity());
     }
+
     trie
 }
 
@@ -39,6 +41,7 @@ fn insert() {
         assert_eq!(*trie.get(&key).unwrap(), val);
     }
 
+    assert!(trie.check_integrity());
     assert_eq!(trie.len(), TEST_DATA.len());
 }
 
@@ -54,13 +57,11 @@ fn insert_replace() {
 #[test]
 fn remove() {
     let mut trie = test_trie();
-    let mut length = trie.len();
 
     // Remove.
     for &(key, val) in &TEST_DATA {
         assert_eq!(trie.remove(&key), Some(val));
-        length -= 1;
-        assert_eq!(length, trie.len());
+        assert!(trie.check_integrity());
     }
 
     // Check non-existance.

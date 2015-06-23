@@ -30,25 +30,22 @@ macro_rules! no_children {
 /// [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
 #[derive(Debug)]
 pub struct Trie<K, V> {
-    root: TrieNode<K, V>,
-    length: usize
-}
-
-#[derive(Debug)]
-struct TrieNode<K, V> {
     /// Key fragments/bits associated with this node, such that joining the keys from all
-    /// parent nodes is equal to the bit-encoding of this node's key.
+    /// parent nodes and this node is equal to the bit-encoding of this node's key.
     key: NibbleVec,
 
     /// The key and value stored at this node.
     key_value: Option<Box<KeyValue<K, V>>>,
 
-    /// The children of this node stored such that the first nibble of each child key
-    /// dictates the child's bucket.
-    children: [Option<Box<TrieNode<K, V>>>; BRANCH_FACTOR],
+    /// The number of values stored in this sub-trie (this node and all descendants).
+    length: usize,
 
     /// The number of children which are Some rather than None.
-    child_count: usize
+    child_count: usize,
+
+    /// The children of this node stored such that the first nibble of each child key
+    /// dictates the child's bucket.
+    children: [Option<Box<Trie<K, V>>>; BRANCH_FACTOR],
 }
 
 #[derive(Debug)]
@@ -59,21 +56,20 @@ struct KeyValue<K, V> {
 
 #[derive(Debug)]
 enum DeleteAction<K, V> {
-    Replace(Box<TrieNode<K, V>>),
+    Replace(Box<Trie<K, V>>),
     Delete,
     DoNothing
 }
 
+// Public-facing API.
 impl<K, V> Trie<K, V> where K: TrieKey {
     /// Create an empty Trie with no data.
     pub fn new() -> Trie<K, V> {
         Trie {
-            root: TrieNode {
-                key: NibbleVec::new(),
-                key_value: None,
-                children: no_children![],
-                child_count: 0
-            },
+            key: NibbleVec::new(),
+            key_value: None,
+            children: no_children![],
+            child_count: 0,
             length: 0
         }
     }
@@ -91,50 +87,35 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Fetch a reference to the given key's corresponding value (if any).
     pub fn get(&self, key: &K) -> Option<&V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get(&self.root, key, key_fragments)
+        get(self, key, key_fragments)
     }
 
     /// Fetch a mutable reference to the given key's corresponding value (if any).
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get_mut(&mut self.root, key, key_fragments)
+        get_mut(self, key, key_fragments)
     }
 
     /// Insert the given key-value pair, returning any previous value associated with the key.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        let result = self.root.insert(key, value, key_fragments);
-
-        if result.is_none() {
-            self.length += 1;
-        }
-
-        result
+        self.insert_recursive(key, value, key_fragments)
     }
 
     /// Remove and return the value associated with the given key.
     pub fn remove(&mut self, key: &K) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
 
-        // Use the TrieNode recursive removal function but ignore its delete action.
+        // Use the recursive removal function but ignore its delete action.
         // The root can't be replaced or deleted.
-        let (result, _) = self.root.remove_recursive(key, key_fragments);
-
-        if result.is_some() {
-            self.length -= 1;
-        }
-
-        result
+        self.remove_recursive(key, key_fragments).0
     }
 
     /// Check that the Trie invariants are satisfied - you shouldn't ever have to call this!
     /// Quite slow!
     #[doc(hidden)]
     pub fn check_integrity(&self) -> bool {
-        match self.root.check_integrity(&NibbleVec::new()) {
-            (false, _) => false,
-            (true, size) => size == self.length
-        }
+        self.check_integrity_recursive(&NibbleVec::new()).0
     }
 }
 
@@ -150,7 +131,7 @@ macro_rules! get_function {
         mutability: $($mut_:tt)*
     ) => {
     id!(fn $name<'a, K, V>(
-            trie: &'a $($mut_)* TrieNode<K, V>,
+            trie: &'a $($mut_)* Trie<K, V>,
             key: &K,
             mut key_fragments: NibbleVec)
             -> Option<&'a $($mut_)* V> where K: TrieKey
@@ -203,49 +184,59 @@ macro_rules! get_function {
 get_function!(name: get_mut, mutability: mut);
 get_function!(name: get, mutability: );
 
-impl<K, V> TrieNode<K, V> where K: TrieKey {
-    /// Create a node with no children.
-    fn new(key_fragments: NibbleVec, key: K, value: V) -> TrieNode<K, V> {
-        TrieNode {
+// Implementation details.
+impl<K, V> Trie<K, V> where K: TrieKey {
+    /// Create a Trie with no children.
+    fn with_key_value(key_fragments: NibbleVec, key: K, value: V) -> Trie<K, V> {
+        Trie {
             key: key_fragments,
             key_value: Some(Box::new(KeyValue { key: key, value: value })),
             children: no_children![],
-            child_count: 0
+            child_count: 0,
+            length: 1
         }
     }
 
-    /// Add a child at the given index, assuming none exists already.
-    fn add_child(&mut self, idx: usize, node: Box<TrieNode<K, V>>) {
-        self.children[idx] = Some(node);
+    /// Add a child at the given index, given that none exists there already.
+    fn add_child(&mut self, idx: usize, node: Box<Trie<K, V>>) {
+        debug_assert!(self.children[idx].is_none());
         self.child_count += 1;
+        self.length += node.length;
+        self.children[idx] = Some(node);
     }
 
     /// Remove a child at the given index, if it exists.
-    fn take_child(&mut self, idx: usize) -> Option<Box<TrieNode<K, V>>> {
-        self.children[idx].take().map(|node| { self.child_count -= 1; node })
+    fn take_child(&mut self, idx: usize) -> Option<Box<Trie<K, V>>> {
+        self.children[idx].take().map(|node| {
+            self.child_count -= 1;
+            self.length -= node.length;
+            node
+        })
     }
 
     /// Helper function for removing the single child of a node.
-    fn take_only_child(&mut self) -> Box<TrieNode<K, V>> {
+    fn take_only_child(&mut self) -> Box<Trie<K, V>> {
         for i in 0 .. BRANCH_FACTOR {
-            match self.take_child(i) {
-                Some(child) => return child,
-                None => ()
+            if let Some(child) = self.take_child(i) {
+                return child;
             }
         }
         unreachable!("node with child_count 1 has no actual children");
     }
 
-    /// Set the key and value of a node.
-    fn set_key_value(&mut self, key: K, value: V) {
+    /// Set the key and value of a node, given that it currently lacks one.
+    fn add_key_value(&mut self, key: K, value: V) {
+        debug_assert!(self.key_value.is_none());
         self.key_value = Some(Box::new(KeyValue { key: key, value: value }));
+        self.length += 1;
     }
 
     /// Move the value out of a node, whilst checking that its key is as expected.
     /// Can panic (see check_keys).
-    fn extract_value(&mut self, key: &K) -> Option<V> {
+    fn take_value(&mut self, key: &K) -> Option<V> {
         self.key_value.take().map(|kv| {
             check_keys(&kv.key, key);
+            self.length -= 1;
             kv.value
         })
     }
@@ -254,29 +245,29 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Let `key_fragments` be the bits of the key which are valid for insertion *below*
     /// the current node such that the 0th element of `key_fragments` describes the bucket
     /// that this key would be inserted into.
-    fn insert(&mut self, key: K, value: V, mut key_fragments: NibbleVec) -> Option<V> {
+    fn insert_recursive(&mut self, key: K, value: V, mut key_fragments: NibbleVec) -> Option<V> {
         // Handle inserts at the root.
         if key_fragments.len() == 0 {
-            let result = self.extract_value(&key);
-            self.set_key_value(key, value);
+            let result = self.take_value(&key);
+            self.add_key_value(key, value);
             return result;
         }
 
         let bucket = key_fragments.get(0) as usize;
 
-        match self.children[bucket] {
+        let result = match self.children[bucket] {
             // Case 1: No match. Simply insert.
             None => {
-                self.add_child(bucket, Box::new(TrieNode::new(key_fragments, key, value)));
-                None
+                self.add_child(bucket, Box::new(Trie::with_key_value(key_fragments, key, value)));
+                return None;
             }
 
             Some(ref mut existing_child) => {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Full key match. Replace existing.
                     KeyMatch::Full => {
-                        let result = existing_child.extract_value(&key);
-                        existing_child.set_key_value(key, value);
+                        let result = existing_child.take_value(&key);
+                        existing_child.add_key_value(key, value);
                         result
                     }
 
@@ -293,7 +284,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
 
                         existing_child.add_child(
                             new_key_bucket,
-                            Box::new(TrieNode::new(new_key, key, value))
+                            Box::new(Trie::with_key_value(new_key, key, value))
                         );
 
                         None
@@ -305,27 +296,32 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                         let prefix_length = existing_child.key.len();
                         let new_key_tail = key_fragments.split(prefix_length);
 
-                        existing_child.insert(key, value, new_key_tail)
+                        existing_child.insert_recursive(key, value, new_key_tail)
                     }
 
                     // Case 5: Key to insert is a prefix of the existing one.
                     // Split the existing child and place its value below the new one.
                     KeyMatch::FirstPrefix => {
                         existing_child.split(key_fragments.len());
-                        existing_child.set_key_value(key, value);
+                        existing_child.add_key_value(key, value);
 
                         None
                     }
                 }
             }
+        };
+
+        if result.is_none() {
+            self.length += 1;
         }
+        result
     }
 
     fn remove_recursive(&mut self, key: &K, mut key_fragments: NibbleVec)
         -> (Option<V>, DeleteAction<K, V>) {
         // Handle removals at the root.
         if key_fragments.len() == 0 {
-            return (self.extract_value(&key), DoNothing);
+            return (self.take_value(&key), DoNothing);
         }
 
         let bucket = key_fragments.get(0) as usize;
@@ -338,14 +334,9 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 match match_keys(&key_fragments, &existing_child.key) {
                     // Case 2: Node found.
                     KeyMatch::Full => {
-                        match existing_child.key_value.take() {
+                        match existing_child.take_value(key) {
                             // Case 2a: Key found, pass the value up and delete the node.
-                            Some(kv) => {
-                                check_keys(key, &kv.key);
-
-                                (Some(kv.value), existing_child.delete_node())
-                            }
-
+                            Some(value) => (Some(value), existing_child.delete_node()),
                             // Case 2b: Key not found, nothing to remove.
                             None => return (None, DoNothing)
                         }
@@ -364,6 +355,11 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                 }
             }
         };
+
+        // If a value has been removed, reduce the length of this trie.
+        if value.is_some() {
+            self.length -= 1;
+        }
 
         // Apply the computed delete action.
         match delete_action {
@@ -431,11 +427,12 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         // Insert the collected items below what is now an empty prefix node.
         let bucket = key.get(0) as usize;
         self.children[bucket] = Some(Box::new(
-            TrieNode {
+            Trie {
                 key: key,
                 key_value: key_value,
                 children: children,
-                child_count: child_count
+                child_count: child_count,
+                length: self.length
             }
         ));
     }
@@ -443,7 +440,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Check the integrity of a trie subtree (quite costly).
     /// Return true and the size of the subtree if all checks are successful,
     /// or false and a junk value if any test fails.
-    fn check_integrity(&self, prefix: &NibbleVec) -> (bool, usize) {
+    fn check_integrity_recursive(&self, prefix: &NibbleVec) -> (bool, usize) {
         let mut sub_tree_size = 0;
         let is_root = prefix.len() == 0;
 
@@ -460,13 +457,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         }
 
         // Check that the child count matches the actual number of children.
-        let child_count = self.children.iter().fold(0, |acc, elem| {
-            if elem.is_some() {
-                acc + 1
-            } else {
-                acc
-            }
-        });
+        let child_count = self.children.iter().fold(0, |acc, e| acc + (e.is_some() as usize));
 
         if child_count != self.child_count {
             println!("Child count error, recorded: {}, actual: {}", self.child_count, child_count);
@@ -493,11 +484,17 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         // Recursively check children.
         for i in 0 .. BRANCH_FACTOR {
             if let Some(ref child) = self.children[i] {
-                match child.check_integrity(&trie_key) {
+                match child.check_integrity_recursive(&trie_key) {
                     (false, _) => return (false, sub_tree_size),
                     (true, child_size) => sub_tree_size += child_size
                 }
             }
+        }
+
+        // Check subtree size.
+        if self.length != sub_tree_size {
+            println!("Subtree size mismatch, recorded: {}, actual: {}", self.length, sub_tree_size);
+            return (false, sub_tree_size);
         }
 
         (true, sub_tree_size)
