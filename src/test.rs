@@ -1,10 +1,13 @@
 use Trie;
 
-static TEST_DATA: [(&'static str, u32); 4] = [
-        ("abcdefgh", 18),
-        ("abc", 17),
-        ("acbdef", 16),
-        ("bcdefgh", 15)
+const TEST_DATA: [(&'static str, u32); 7] = [
+        ("abcdefgh", 19),
+        ("abcdef", 18),
+        ("abcd", 17),
+        ("ab", 16),
+        ("a", 15),
+        ("acbdef", 30),
+        ("bcdefgh", 29)
 ];
 
 fn test_trie() -> Trie<&'static str, u32> {
@@ -68,4 +71,26 @@ fn remove() {
     for &(key, _) in &TEST_DATA {
         assert!(trie.get(&key).is_none());
     }
+}
+
+#[test]
+fn nearest_ancestor_root() {
+    let mut trie = Trie::new();
+    trie.insert("", 55);
+    assert_eq!(trie.get_nearest_ancestor(&""), Some(&55));
+}
+
+#[test]
+fn nearest_ancestor() {
+    let trie = test_trie();
+    assert_eq!(trie.get_nearest_ancestor(&""), None);
+
+    // Test identity prefixes.
+    for &(key, val) in &TEST_DATA {
+        assert_eq!(trie.get_nearest_ancestor(&key), Some(&val));
+    }
+
+    assert_eq!(trie.get_nearest_ancestor(&"abcdefg"), trie.get(&"abcdef"));
+    assert_eq!(trie.get_nearest_ancestor(&"abcde"), trie.get(&"abcd"));
+    assert_eq!(trie.get_nearest_ancestor(&"aauksdjk"), trie.get(&"a"));
 }

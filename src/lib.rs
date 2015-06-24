@@ -96,6 +96,25 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         get_mut(self, key, key_fragments)
     }
 
+    /// Fetch a reference to the closest ancestor node of the given key.
+    ///
+    /// If `key` is encoded as byte-vector `b`, return the node `n` in the tree
+    /// such that `n`'s key's byte-vector is the longest possible prefix of `b`, and `n`
+    /// has a value.
+    ///
+    /// Invariant: `result.is_some() => result.key_value.is_some()`.
+    pub fn get_nearest_ancestor_node(&self, key: &K) -> Option<&Trie<K, V>> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        self.get_nearest_ancestor_node_recursive(key_fragments)
+    }
+
+    /// Fetch the closest ancestor *value* for a given key.
+    ///
+    /// See `get_nearest_ancestor_node`.
+    pub fn get_nearest_ancestor(&self, key: &K) -> Option<&V> {
+        self.get_nearest_ancestor_node(key).and_then(|trie| trie.key_value.as_ref().map(|kv| &kv.value))
+    }
+
     /// Insert the given key-value pair, returning any previous value associated with the key.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
@@ -239,6 +258,38 @@ impl<K, V> Trie<K, V> where K: TrieKey {
             self.length -= 1;
             kv.value
         })
+    }
+
+    /// Get a reference to this node if it has a value.
+    fn as_value_node(&self) -> Option<&Trie<K, V>> {
+        self.key_value.as_ref().map(|_| self)
+    }
+
+    fn get_nearest_ancestor_node_recursive(&self, mut key_fragments: NibbleVec)
+    -> Option<&Trie<K, V>> {
+        if key_fragments.len() == 0 {
+            return self.as_value_node();
+        }
+
+        let bucket = key_fragments.get(0) as usize;
+
+        let result = match self.children[bucket] {
+            None => None,
+            Some(ref existing_child) => {
+                match match_keys(&key_fragments, &existing_child.key) {
+                    KeyMatch::Full | KeyMatch::Partial(_) => existing_child.as_value_node(),
+                    KeyMatch::SecondPrefix => {
+                        let prefix_length = existing_child.key.len();
+                        let new_key_tail = key_fragments.split(prefix_length);
+
+                        existing_child.get_nearest_ancestor_node_recursive(new_key_tail)
+                    },
+                    KeyMatch::FirstPrefix => None,
+                }
+            }
+        };
+
+        result.or_else(|| self.as_value_node())
     }
 
     /// Insert a given key and value below the current node.
