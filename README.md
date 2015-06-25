@@ -11,8 +11,9 @@ You can read about my experience implementing this data structure [here][radix-p
 # Features
 
 * Compressed nodes. Common key prefixes are stored only once.
+* Trie-specific methods to look-up predecessors (closest ancestors).
 * Key Generic. Any type that can be serialised as a vector of bytes can be used as a key.
-* Safe. No unsafe code (yet).
+* Safe - no unsafe code.
 
 # Usage
 
@@ -29,9 +30,10 @@ https://michaelsproul.github.io/rust_radix_trie/
 
 # To Do
 
-* Add Trie-specific methods for prefixes, successors, etc.
-* Implement the Entry API.
-* Add iterators.
+* Optimise (make a `NibbleSlice`, see [paper][radix-paper]).
+* QuickCheck tests.
+* Successor methods?
+* Implement the Entry API?
 
 # License
 
