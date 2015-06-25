@@ -2,12 +2,14 @@ extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
+pub use iter::{Iter, Keys, Values};
+
 use keys::{match_keys, check_keys, KeyMatch};
 use DeleteAction::*;
 
 mod keys;
-#[cfg(test)]
-mod test;
+mod iter;
+#[cfg(test)] mod test;
 
 const BRANCH_FACTOR: usize = 16;
 
@@ -20,7 +22,7 @@ macro_rules! no_children {
     ])
 }
 
-/// Tries allow collections of string-like keys to be efficiently stored and queried.
+/// Data-structure for storing and querying string-like keys and associated values.
 ///
 /// Any keys which share a common *prefix* are stored below a single copy of that prefix.
 /// This saves space, and also allows the longest prefix of any given key to be found.
@@ -112,7 +114,8 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     ///
     /// See `get_nearest_ancestor_node`.
     pub fn get_nearest_ancestor(&self, key: &K) -> Option<&V> {
-        self.get_nearest_ancestor_node(key).and_then(|trie| trie.key_value.as_ref().map(|kv| &kv.value))
+        self.get_nearest_ancestor_node(key)
+            .and_then(|trie| trie.key_value.as_ref().map(|kv| &kv.value))
     }
 
     /// Insert the given key-value pair, returning any previous value associated with the key.
@@ -128,6 +131,21 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         // Use the recursive removal function but ignore its delete action.
         // The root can't be replaced or deleted.
         self.remove_recursive(key, key_fragments).0
+    }
+
+    /// Return an iterator over the keys and values of the Trie.
+    pub fn iter(&self) -> Iter<K, V> {
+        Iter::new(self)
+    }
+
+    /// Return an iterator over the keys of the Trie.
+    pub fn keys(&self) -> Keys<K, V> {
+        Keys::new(self.iter())
+    }
+
+    /// Return an iterator over the values of the Trie.
+    pub fn values(&self) -> Values<K, V> {
+        Values::new(self.iter())
     }
 
     /// Check that the Trie invariants are satisfied - you shouldn't ever have to call this!

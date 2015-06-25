@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use Trie;
 
 const TEST_DATA: [(&'static str, u32); 7] = [
@@ -93,4 +94,13 @@ fn nearest_ancestor() {
     assert_eq!(trie.get_nearest_ancestor(&"abcdefg"), trie.get(&"abcdef"));
     assert_eq!(trie.get_nearest_ancestor(&"abcde"), trie.get(&"abcd"));
     assert_eq!(trie.get_nearest_ancestor(&"aauksdjk"), trie.get(&"a"));
+}
+
+#[test]
+fn iter() {
+    type Set = HashSet<(&'static str, u32)>;
+    let trie = test_trie();
+    let expected = TEST_DATA.iter().map(|&x| x).collect::<Set>();
+    let observed = trie.iter().map(|(&k, &v)| (k, v)).collect::<Set>();
+    assert_eq!(expected, observed);
 }
