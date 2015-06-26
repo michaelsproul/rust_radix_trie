@@ -37,28 +37,12 @@ fn get_node_nonexistant() {
 }
 
 #[test]
-fn get_node_mut_nonexistant() {
-    let mut trie = test_trie();
-    assert!(trie.get_node_mut(&"nonexistant").is_none());
-    assert!(trie.get_node_mut(&"").is_some());
-}
-
-#[test]
 fn get_node() {
     let mut trie = Trie::new();
     trie.insert("hello", 55);
-    assert!(trie.get_node(&"h").is_some());
+    assert!(trie.get_node(&"h").is_none());
     assert!(trie.get_node(&"hello").is_some());
 }
-
-#[test]
-fn get_node_mut() {
-    let mut trie = test_trie();
-    trie.insert("hello", 55);
-    assert!(trie.get_node_mut(&"h").is_some());
-    assert!(trie.get_node_mut(&"hello").is_some());
-}
-
 
 #[test]
 fn empty_key() {
@@ -109,22 +93,22 @@ fn remove() {
 fn nearest_ancestor_root() {
     let mut trie = Trie::new();
     trie.insert("", 55);
-    assert_eq!(trie.get_nearest_ancestor(&""), Some(&55));
+    assert_eq!(trie.get_ancestor_value(&""), Some(&55));
 }
 
 #[test]
 fn nearest_ancestor() {
     let trie = test_trie();
-    assert_eq!(trie.get_nearest_ancestor(&""), None);
+    assert_eq!(trie.get_ancestor_value(&""), None);
 
     // Test identity prefixes.
     for &(key, val) in &TEST_DATA {
-        assert_eq!(trie.get_nearest_ancestor(&key), Some(&val));
+        assert_eq!(trie.get_ancestor_value(&key), Some(&val));
     }
 
-    assert_eq!(trie.get_nearest_ancestor(&"abcdefg"), trie.get(&"abcdef"));
-    assert_eq!(trie.get_nearest_ancestor(&"abcde"), trie.get(&"abcd"));
-    assert_eq!(trie.get_nearest_ancestor(&"aauksdjk"), trie.get(&"a"));
+    assert_eq!(trie.get_ancestor_value(&"abcdefg"), trie.get(&"abcdef"));
+    assert_eq!(trie.get_ancestor_value(&"abcde"), trie.get(&"abcd"));
+    assert_eq!(trie.get_ancestor_value(&"aauksdjk"), trie.get(&"a"));
 }
 
 #[test]

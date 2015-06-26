@@ -1,3 +1,7 @@
+//! A wonderful, fast, safe, generic radix trie implementation.
+//!
+//! To get started, see the docs for `Trie` below.
+
 extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
@@ -28,6 +32,9 @@ macro_rules! no_children {
 /// This saves space, and also allows the longest prefix of any given key to be found.
 ///
 /// You can read more about Radix Tries on [Wikipedia][radix-wiki].
+///
+/// Lots of the methods on `Trie` return optional values - they can be composed
+/// nicely using `Option::and_then`.
 ///
 /// [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
 #[derive(Debug)]
@@ -65,7 +72,7 @@ enum DeleteAction<K, V> {
 
 // Public-facing API.
 impl<K, V> Trie<K, V> where K: TrieKey {
-    /// Create an empty Trie with no data.
+    /// Create an empty Trie.
     pub fn new() -> Trie<K, V> {
         Trie {
             key: NibbleVec::new(),
@@ -86,31 +93,45 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.length == 0
     }
 
-    /// Fetch a reference to the given key's corresponding value (if any).
-    pub fn get(&self, key: &K) -> Option<&V> {
-        let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get(self, key, key_fragments)
+    /// Determine if the trie is a leaf node (has no children).
+    pub fn is_leaf(&self) -> bool {
+        self.child_count == 0
     }
 
-    /// Fetch a mutable reference to the given key's corresponding value (if any).
+    /// Get the key stored at this node, if any.
+    pub fn key(&self) -> Option<&K> {
+        self.key_value.as_ref().map(|kv| &kv.key)
+    }
+
+    /// Get the value stored at this node, if any.
+    pub fn value(&self) -> Option<&V> {
+        self.key_value.as_ref().map(|kv| &kv.value)
+    }
+
+    /// Get a mutable reference to the value stored at this node, if any.
+    pub fn value_mut(&mut self) -> Option<&mut V> {
+        self.key_value.as_mut().map(|kv| &mut kv.value)
+    }
+
+    /// Fetch a reference to the given key's corresponding value, if any.
+    pub fn get(&self, key: &K) -> Option<&V> {
+        self.get_node(key).and_then(|t| t.value_checked(key))
+    }
+
+    /// Fetch a mutable reference to the given key's corresponding value, if any.
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get_mut(self, key, key_fragments)
+        get_node_mut(self, key_fragments).and_then(|t| t.value_checked_mut(key))
     }
 
-    /// Fetch a reference to the given key's corresponding node (if any).
+    /// Fetch a reference to the given key's corresponding node, if any.
+    ///
+    /// Note that there is no mutable version of this method, as mutating
+    /// subtries directly violates the key-structure of the trie.
     pub fn get_node(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         get_node(self, key_fragments)
     }
-
-    /// Fetch a mutable reference to the given key's corresponding node (if any).
-    pub fn get_node_mut(&mut self, key: &K) -> Option<&mut Trie<K, V>> {
-        let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get_node_mut(self, key_fragments)
-    }
-
-
 
     /// Fetch a reference to the closest ancestor node of the given key.
     ///
@@ -119,17 +140,16 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// has a value.
     ///
     /// Invariant: `result.is_some() => result.key_value.is_some()`.
-    pub fn get_nearest_ancestor_node(&self, key: &K) -> Option<&Trie<K, V>> {
+    pub fn get_ancestor(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        self.get_nearest_ancestor_node_recursive(key_fragments)
+        self.get_ancestor_node_recursive(key_fragments)
     }
 
     /// Fetch the closest ancestor *value* for a given key.
     ///
-    /// See `get_nearest_ancestor_node`.
-    pub fn get_nearest_ancestor(&self, key: &K) -> Option<&V> {
-        self.get_nearest_ancestor_node(key)
-            .and_then(|trie| trie.key_value.as_ref().map(|kv| &kv.value))
+    /// See `get_ancestor` for precise semantics, this is just a shortcut.
+    pub fn get_ancestor_value(&self, key: &K) -> Option<&V> {
+        self.get_ancestor(key).and_then(|t| t.value())
     }
 
     /// Insert the given key-value pair, returning any previous value associated with the key.
@@ -175,66 +195,6 @@ macro_rules! id {
     ($e:item) => { $e }
 }
 
-/// Macro to parametrise over mutability in get methods.
-macro_rules! get_function {
-    (
-        name: $name:ident,
-        mutability: $($mut_:tt)*
-    ) => {
-    id!(fn $name<'a, K, V>(
-            trie: &'a $($mut_)* Trie<K, V>,
-            key: &K,
-            mut key_fragments: NibbleVec)
-            -> Option<&'a $($mut_)* V> where K: TrieKey
-        {
-            // Handle retrieval at the root.
-            if key_fragments.len() == 0 {
-                return match trie.key_value {
-                    Some(ref $($mut_)* kv) => Some(& $($mut_)* kv.value),
-                    None => None
-                };
-            }
-
-            let bucket = key_fragments.get(0) as usize;
-
-            match trie.children[bucket] {
-                None => None,
-                Some(ref $($mut_)* existing_child) => {
-                    match match_keys(&key_fragments, &existing_child.key) {
-                        KeyMatch::Full => {
-                            match existing_child.key_value {
-                                Some(ref $($mut_)* kv) => {
-                                    check_keys(&kv.key, key);
-                                    Some(& $($mut_)* kv.value)
-                                },
-                                None => None
-                            }
-                        },
-
-                        KeyMatch::Partial(idx) => {
-                            let new_key_fragments = key_fragments.split(idx);
-
-                            $name(& $($mut_)* *existing_child, key, new_key_fragments)
-                        },
-
-                        KeyMatch::FirstPrefix => None,
-
-                        KeyMatch::SecondPrefix => {
-                            let prefix_length = existing_child.key.len();
-                            let new_key_fragments = key_fragments.split(prefix_length);
-
-                            $name(& $($mut_)* *existing_child, key, new_key_fragments)
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-get_function!(name: get_mut, mutability: mut);
-get_function!(name: get, mutability: );
-
 /// Macro to parametrise over mutability in get_node methods.
 macro_rules! get_node_function {
     (
@@ -244,10 +204,9 @@ macro_rules! get_node_function {
         id!(fn $name<'a, K, V>(
             trie: &'a $($mut_)* Trie<K, V>,
             mut key_fragments: NibbleVec
-        ) -> Option<&'a $($mut_)* Trie<K, V> > where K: TrieKey {
+        ) -> Option<&'a $($mut_)* Trie<K, V>> where K: TrieKey {
             // Handle retrieval at the root.
             if key_fragments.len() == 0 {
-                println!("hello");
                 return Some(trie);
             }
 
@@ -260,14 +219,14 @@ macro_rules! get_node_function {
                         KeyMatch::Full => Some(existing_child),
                         KeyMatch::Partial(idx) => {
                             let new_key_fragments = key_fragments.split(idx);
-                            $name(& $($mut_)* *existing_child, new_key_fragments)
+                            $name(existing_child, new_key_fragments)
                         },
-                        KeyMatch::FirstPrefix => Some(existing_child),
+                        KeyMatch::FirstPrefix => None,
                         KeyMatch::SecondPrefix => {
                             let prefix_length = existing_child.key.len();
                             let new_key_fragments = key_fragments.split(prefix_length);
 
-                            $name(& $($mut_)* *existing_child, new_key_fragments)
+                            $name(existing_child, new_key_fragments)
                         }
                     }
                 }
@@ -278,7 +237,6 @@ macro_rules! get_node_function {
 
 get_node_function!(name: get_node_mut, mutability: mut);
 get_node_function!(name: get_node, mutability: );
-
 
 // Implementation details.
 impl<K, V> Trie<K, V> where K: TrieKey {
@@ -291,6 +249,22 @@ impl<K, V> Trie<K, V> where K: TrieKey {
             child_count: 0,
             length: 1
         }
+    }
+
+    /// Get the value whilst checking a key match.
+    fn value_checked(&self, key: &K) -> Option<&V> {
+        self.key_value.as_ref().map(|kv| {
+            check_keys(&kv.key, key);
+            &kv.value
+        })
+    }
+
+    // Get a mutable value whilst checking a key match.
+    fn value_checked_mut(&mut self, key: &K) -> Option<&mut V> {
+        self.key_value.as_mut().map(|kv| {
+            check_keys(&kv.key, key);
+            &mut kv.value
+        })
     }
 
     /// Add a child at the given index, given that none exists there already.
@@ -342,7 +316,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.key_value.as_ref().map(|_| self)
     }
 
-    fn get_nearest_ancestor_node_recursive(&self, mut key_fragments: NibbleVec)
+    fn get_ancestor_node_recursive(&self, mut key_fragments: NibbleVec)
     -> Option<&Trie<K, V>> {
         if key_fragments.len() == 0 {
             return self.as_value_node();
@@ -359,7 +333,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
                         let prefix_length = existing_child.key.len();
                         let new_key_tail = key_fragments.split(prefix_length);
 
-                        existing_child.get_nearest_ancestor_node_recursive(new_key_tail)
+                        existing_child.get_ancestor_node_recursive(new_key_tail)
                     },
                     KeyMatch::FirstPrefix => None,
                 }
