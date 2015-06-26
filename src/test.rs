@@ -30,6 +30,37 @@ fn get_nonexistant() {
 }
 
 #[test]
+fn get_node_nonexistant() {
+    let trie = test_trie();
+    assert!(trie.get_node(&"nonexistant").is_none());
+    assert!(trie.get_node(&"").is_some());
+}
+
+#[test]
+fn get_node_mut_nonexistant() {
+    let mut trie = test_trie();
+    assert!(trie.get_node_mut(&"nonexistant").is_none());
+    assert!(trie.get_node_mut(&"").is_some());
+}
+
+#[test]
+fn get_node() {
+    let mut trie = Trie::new();
+    trie.insert("hello", 55);
+    assert!(trie.get_node(&"h").is_some());
+    assert!(trie.get_node(&"hello").is_some());
+}
+
+#[test]
+fn get_node_mut() {
+    let mut trie = test_trie();
+    trie.insert("hello", 55);
+    assert!(trie.get_node_mut(&"h").is_some());
+    assert!(trie.get_node_mut(&"hello").is_some());
+}
+
+
+#[test]
 fn empty_key() {
     let mut trie = test_trie();
     trie.insert(&"", 99);
