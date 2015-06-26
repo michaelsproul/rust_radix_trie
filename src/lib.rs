@@ -98,6 +98,20 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         get_mut(self, key, key_fragments)
     }
 
+    /// Fetch a reference to the given key's corresponding node (if any).
+    pub fn get_node(&self, key: &K) -> Option<&Trie<K, V>> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        get_node(self, key_fragments)
+    }
+
+    /// Fetch a mutable reference to the given key's corresponding node (if any).
+    pub fn get_node_mut(&mut self, key: &K) -> Option<&mut Trie<K, V>> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        get_node_mut(self, key_fragments)
+    }
+
+
+
     /// Fetch a reference to the closest ancestor node of the given key.
     ///
     /// If `key` is encoded as byte-vector `b`, return the node `n` in the tree
@@ -220,6 +234,51 @@ macro_rules! get_function {
 
 get_function!(name: get_mut, mutability: mut);
 get_function!(name: get, mutability: );
+
+/// Macro to parametrise over mutability in get_node methods.
+macro_rules! get_node_function {
+    (
+        name: $name:ident,
+        mutability: $($mut_:tt)*
+    ) => {
+        id!(fn $name<'a, K, V>(
+            trie: &'a $($mut_)* Trie<K, V>,
+            mut key_fragments: NibbleVec
+        ) -> Option<&'a $($mut_)* Trie<K, V> > where K: TrieKey {
+            // Handle retrieval at the root.
+            if key_fragments.len() == 0 {
+                println!("hello");
+                return Some(trie);
+            }
+
+            let bucket = key_fragments.get(0) as usize;
+
+            match trie.children[bucket] {
+                None => None,
+                Some(ref $($mut_)* existing_child) => {
+                    match match_keys(&key_fragments, &existing_child.key) {
+                        KeyMatch::Full => Some(existing_child),
+                        KeyMatch::Partial(idx) => {
+                            let new_key_fragments = key_fragments.split(idx);
+                            $name(& $($mut_)* *existing_child, new_key_fragments)
+                        },
+                        KeyMatch::FirstPrefix => Some(existing_child),
+                        KeyMatch::SecondPrefix => {
+                            let prefix_length = existing_child.key.len();
+                            let new_key_fragments = key_fragments.split(prefix_length);
+
+                            $name(& $($mut_)* *existing_child, new_key_fragments)
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+get_node_function!(name: get_node_mut, mutability: mut);
+get_node_function!(name: get_node, mutability: );
+
 
 // Implementation details.
 impl<K, V> Trie<K, V> where K: TrieKey {
