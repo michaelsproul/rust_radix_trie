@@ -155,7 +155,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Insert the given key-value pair, returning any previous value associated with the key.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        self.insert_recursive(key, value, key_fragments)
+        Insert::run(self, key, value, key_fragments)
     }
 
     /// Remove and return the value associated with the given key.
@@ -164,7 +164,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
 
         // Use the recursive removal function but ignore its delete action.
         // The root can't be replaced or deleted.
-        self.remove_recursive(key, key_fragments).0
+        Remove::run(self, key, (), key_fragments).0
     }
 
     /// Return an iterator over the keys and values of the Trie.
@@ -237,6 +237,198 @@ macro_rules! get_node_function {
 
 get_node_function!(name: get_node_mut, mutability: mut);
 get_node_function!(name: get_node, mutability: );
+
+/// Trait capturing a (mutable) traversal of a trie.
+///
+/// By providing functions for each of the different cases, it is possible to describe a number
+/// of different traversals. For now it's probably best to view the source for `run` to understand
+/// how best to implement each function.
+pub trait Traversal<'a, K, V> where K: TrieKey {
+    /// Key type to be threaded through by `run`, needn't be `K` (is often `&'a K`).
+    type Key: 'a;
+    /// Value type to be threaded through by `run`, needn't be `V` (is often `()`).
+    type Value: 'a;
+    /// Type returned by the entire traversal, for insert it's `Option<V>`.
+    type Result;
+
+    // FIXME: Use associated constants in the future.
+    fn default_result() -> Self::Result;
+
+    #[allow(unused)]
+    fn root_fn(root: &mut Trie<K, V>, key: Self::Key, value: Self::Value) -> Self::Result {
+        Self::default_result()
+    }
+
+    #[allow(unused)]
+    fn no_child_fn(trie: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec, bucket: usize) -> Self::Result {
+        Self::default_result()
+    }
+
+    #[allow(unused)]
+    fn full_match_fn(child: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec) -> Self::Result {
+        Self::default_result()
+    }
+
+    #[allow(unused)]
+    fn partial_match_fn(child: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec, idx: usize) -> Self::Result {
+        Self::default_result()
+    }
+
+    #[allow(unused)]
+    fn first_prefix_fn(child: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec) -> Self::Result {
+        Self::default_result()
+    }
+
+    #[allow(unused)]
+    fn action_fn(trie: &mut Trie<K, V>, intermediate: Self::Result, bucket: usize) -> Self::Result {
+        intermediate
+    }
+
+    /// Run the traversal, returning the result.
+    ///
+    /// Let `key_fragments` be the bits of the key which are valid for insertion *below*
+    /// the current node such that the 0th element of `key_fragments` describes the bucket
+    /// that this key would be inserted into.
+    fn run(trie: &mut Trie<K, V>, key: Self::Key, value: Self::Value, mut key_fragments: NibbleVec) -> Self::Result {
+        if key_fragments.len() == 0 {
+            return Self::root_fn(trie, key, value);
+        }
+
+        let bucket = key_fragments.get(0) as usize;
+
+        let intermediate = match trie.children[bucket] {
+            None => return Self::no_child_fn(trie, key, value, key_fragments, bucket),
+            Some(ref mut child) => {
+                match match_keys(&key_fragments, &child.key) {
+                    KeyMatch::Full =>
+                        Self::full_match_fn(child, key, value, key_fragments),
+                    KeyMatch::Partial(i) =>
+                        Self::partial_match_fn(child, key, value, key_fragments, i),
+                    KeyMatch::FirstPrefix =>
+                        Self::first_prefix_fn(child, key, value, key_fragments),
+                    KeyMatch::SecondPrefix => {
+                        let new_key = key_fragments.split(child.key.len());
+                        Self::run(child, key, value, new_key)
+                    }
+                }
+            }
+        };
+
+        Self::action_fn(trie, intermediate, bucket)
+    }
+}
+
+/// Traversal type implementing removal.
+#[allow(unused)]
+enum Remove {}
+
+impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Remove where K: TrieKey {
+    type Key = &'a K;
+    type Value = ();
+    type Result = (Option<V>, DeleteAction<K, V>);
+
+    fn default_result() -> Self::Result {
+        (None, DoNothing)
+    }
+
+    fn root_fn(root: &mut Trie<K, V>, key: &K, _: ()) -> Self::Result {
+        (root.take_value(key), DoNothing)
+    }
+
+    fn full_match_fn(child: &mut Trie<K, V>, key: &K, _: (), _: NibbleVec) -> Self::Result {
+        match child.take_value(key) {
+            Some(value) => (Some(value), child.delete_node()),
+            None => (None, DoNothing)
+        }
+    }
+
+    fn action_fn
+    (trie: &mut Trie<K, V>, (value, action): (Option<V>, DeleteAction<K, V>), bucket: usize)
+    -> Self::Result {
+        // If a value has been removed, reduce the length of this trie.
+        if value.is_some() {
+            trie.length -= 1;
+        }
+
+        // Apply the computed delete action.
+        match action {
+            Replace(node) => {
+                trie.children[bucket] = Some(node);
+                (value, DoNothing)
+            }
+            Delete => {
+                trie.take_child(bucket);
+                // The removal of a child could cause this node to be replaced or deleted.
+                (value, trie.delete_node())
+            }
+            DoNothing => (value, DoNothing)
+        }
+    }
+}
+
+/// Traversal type implementing insertion.
+#[allow(unused)]
+enum Insert {}
+
+impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Insert where K: TrieKey {
+    type Key = K;
+    type Value = V;
+    type Result = Option<V>;
+
+    fn default_result() -> Option<V> {
+        None
+    }
+
+    fn root_fn(root: &mut Trie<K, V>, key: K, value: V) -> Option<V> {
+        root.replace_value(key, value)
+    }
+
+    // No child, insert directly.
+    fn no_child_fn(trie: &mut Trie<K, V>, key: K, value: V, key_fragments: NibbleVec, bucket: usize) -> Option<V> {
+        trie.add_child(bucket, Box::new(Trie::with_key_value(key_fragments, key, value)));
+        None
+    }
+
+    // Full key match. Replace existing.
+    fn full_match_fn(child: &mut Trie<K, V>, key: K, value: V, _: NibbleVec) -> Option<V> {
+        child.replace_value(key, value)
+    }
+
+    // Partial key match.
+    // Split the existing node's key, insert a new child for the second half of the
+    // key and insert the new key as a new child, with the prefix stripped.
+    fn partial_match_fn(child: &mut Trie<K, V>, key: K, value: V, mut key_fragments: NibbleVec, idx: usize) -> Option<V> {
+        // Split the existing child.
+        child.split(idx);
+
+        // Insert the new key below the prefix node.
+        let new_key = key_fragments.split(idx);
+        let new_key_bucket = new_key.get(0) as usize;
+
+        child.add_child(
+            new_key_bucket,
+            Box::new(Trie::with_key_value(new_key, key, value))
+        );
+
+        None
+    }
+
+    // Key to insert is a prefix of the existing one.
+    // Split the existing child and place its value below the new one.
+    fn first_prefix_fn(child: &mut Trie<K, V>, key: K, value: V, key_fragments: NibbleVec) -> Option<V> {
+        child.split(key_fragments.len());
+        child.add_key_value(key, value);
+        None
+    }
+
+    fn action_fn(trie: &mut Trie<K, V>, previous_value: Option<V>, _: usize) -> Self::Result {
+        // If there's no previous value, increase the length of the trie.
+        if previous_value.is_none() {
+            trie.length += 1;
+        }
+        previous_value
+    }
+}
 
 // Implementation details.
 impl<K, V> Trie<K, V> where K: TrieKey {
@@ -311,6 +503,13 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         })
     }
 
+    /// Replace a value, returning the previous value if there was one.
+    fn replace_value(&mut self, key: K, value: V) -> Option<V> {
+        let previous = self.take_value(&key);
+        self.add_key_value(key, value);
+        previous
+    }
+
     /// Get a reference to this node if it has a value.
     fn as_value_node(&self) -> Option<&Trie<K, V>> {
         self.key_value.as_ref().map(|_| self)
@@ -341,144 +540,6 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         };
 
         result.or_else(|| self.as_value_node())
-    }
-
-    /// Insert a given key and value below the current node.
-    /// Let `key_fragments` be the bits of the key which are valid for insertion *below*
-    /// the current node such that the 0th element of `key_fragments` describes the bucket
-    /// that this key would be inserted into.
-    fn insert_recursive(&mut self, key: K, value: V, mut key_fragments: NibbleVec) -> Option<V> {
-        // Handle inserts at the root.
-        if key_fragments.len() == 0 {
-            let result = self.take_value(&key);
-            self.add_key_value(key, value);
-            return result;
-        }
-
-        let bucket = key_fragments.get(0) as usize;
-
-        let result = match self.children[bucket] {
-            // Case 1: No match. Simply insert.
-            None => {
-                self.add_child(bucket, Box::new(Trie::with_key_value(key_fragments, key, value)));
-                return None;
-            }
-
-            Some(ref mut existing_child) => {
-                match match_keys(&key_fragments, &existing_child.key) {
-                    // Case 2: Full key match. Replace existing.
-                    KeyMatch::Full => {
-                        let result = existing_child.take_value(&key);
-                        existing_child.add_key_value(key, value);
-                        result
-                    }
-
-                    // Case 3: Partial key match.
-                    // Split the existing node's key, insert a new child for the second half of the
-                    // key and insert the new key as a new child, with the prefix stripped.
-                    KeyMatch::Partial(idx) => {
-                        // Split the existing child.
-                        existing_child.split(idx);
-
-                        // Insert the new key below the prefix node.
-                        let new_key = key_fragments.split(idx);
-                        let new_key_bucket = new_key.get(0) as usize;
-
-                        existing_child.add_child(
-                            new_key_bucket,
-                            Box::new(Trie::with_key_value(new_key, key, value))
-                        );
-
-                        None
-                    }
-
-                    // Case 4: Existing key is a prefix.
-                    // Strip the prefix and insert below the existing child (recurse).
-                    KeyMatch::SecondPrefix => {
-                        let prefix_length = existing_child.key.len();
-                        let new_key_tail = key_fragments.split(prefix_length);
-
-                        existing_child.insert_recursive(key, value, new_key_tail)
-                    }
-
-                    // Case 5: Key to insert is a prefix of the existing one.
-                    // Split the existing child and place its value below the new one.
-                    KeyMatch::FirstPrefix => {
-                        existing_child.split(key_fragments.len());
-                        existing_child.add_key_value(key, value);
-
-                        None
-                    }
-                }
-            }
-        };
-
-        if result.is_none() {
-            self.length += 1;
-        }
-        result
-    }
-
-    fn remove_recursive(&mut self, key: &K, mut key_fragments: NibbleVec)
-        -> (Option<V>, DeleteAction<K, V>) {
-        // Handle removals at the root.
-        if key_fragments.len() == 0 {
-            return (self.take_value(&key), DoNothing);
-        }
-
-        let bucket = key_fragments.get(0) as usize;
-
-        let (value, delete_action) = match self.children[bucket] {
-            // Case 1: Not found, nothing to remove.
-            None => return (None, DoNothing),
-
-            Some(ref mut existing_child) => {
-                match match_keys(&key_fragments, &existing_child.key) {
-                    // Case 2: Node found.
-                    KeyMatch::Full => {
-                        match existing_child.take_value(key) {
-                            // Case 2a: Key found, pass the value up and delete the node.
-                            Some(value) => (Some(value), existing_child.delete_node()),
-                            // Case 2b: Key not found, nothing to remove.
-                            None => return (None, DoNothing)
-                        }
-                    }
-
-                    // Case 3: Recurse down.
-                    KeyMatch::SecondPrefix => {
-                        let prefix_length = existing_child.key.len();
-                        let new_key_tail = key_fragments.split(prefix_length);
-
-                        existing_child.remove_recursive(key, new_key_tail)
-                    }
-
-                    // Case 4: Not found, nothing to remove.
-                    KeyMatch::Partial(_) | KeyMatch::FirstPrefix => return (None, DoNothing)
-                }
-            }
-        };
-
-        // If a value has been removed, reduce the length of this trie.
-        if value.is_some() {
-            self.length -= 1;
-        }
-
-        // Apply the computed delete action.
-        match delete_action {
-            Replace(node) => {
-                self.children[bucket] = Some(node);
-                (value, DoNothing)
-            }
-
-            Delete => {
-                self.take_child(bucket);
-
-                // The removal of a child could cause this node to be replaced or deleted.
-                (value, self.delete_node())
-            }
-
-            DoNothing => (value, DoNothing)
-        }
     }
 
     /// Having removed the value from a node, work out if the node itself should be deleted.
