@@ -478,6 +478,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
 
     /// Helper function for removing the single child of a node.
     fn take_only_child(&mut self) -> Box<Trie<K, V>> {
+        debug_assert!(self.child_count == 1);
         for i in 0 .. BRANCH_FACTOR {
             if let Some(child) = self.take_child(i) {
                 return child;
@@ -545,13 +546,13 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Having removed the value from a node, work out if the node itself should be deleted.
     /// Depending on the number of children, this method does one of three things.
     ///     0 children => Delete the node if it is valueless, otherwise DoNothing.
-    ///     1 child => Replace the current node by its child.
+    ///     1 child => Replace the current node by its child if it is valueless.
     ///     2 or more children => DoNothing.
     fn delete_node(&mut self) -> DeleteAction<K, V> {
         match self.child_count {
             0 if self.key_value.is_some() => DoNothing,
             0 => Delete,
-            1 => {
+            1 if self.key_value.is_none() => {
                 let mut child = self.take_only_child();
 
                 // Join the child's key onto the existing one.
