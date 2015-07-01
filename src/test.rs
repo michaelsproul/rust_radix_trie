@@ -127,3 +127,11 @@ fn get_prefix_bug() {
     trie.insert("abde", 6);
     assert!(trie.get(&"abc").is_none());
 }
+
+#[test]
+fn get_ancestor_bug() {
+    let mut trie = Trie::new();
+    trie.insert("abc", 1);
+    trie.insert("abcde", 2);
+    assert_eq!(trie.get_ancestor_value(&"abcdz"), Some(&1));
+}

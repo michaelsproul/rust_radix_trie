@@ -524,14 +524,14 @@ impl<K, V> Trie<K, V> where K: TrieKey {
             None => None,
             Some(ref existing_child) => {
                 match match_keys(&key_fragments, &existing_child.key) {
-                    KeyMatch::Full | KeyMatch::Partial(_) => existing_child.as_value_node(),
+                    KeyMatch::Full => existing_child.as_value_node(),
                     KeyMatch::SecondPrefix => {
                         let prefix_length = existing_child.key.len();
                         let new_key_tail = key_fragments.split(prefix_length);
 
                         existing_child.get_ancestor_node_recursive(new_key_tail)
                     },
-                    KeyMatch::FirstPrefix => None,
+                    KeyMatch::FirstPrefix | KeyMatch::Partial(_) => None,
                 }
             }
         };
