@@ -119,3 +119,11 @@ fn iter() {
     let observed = trie.iter().map(|(&k, &v)| (k, v)).collect::<Set>();
     assert_eq!(expected, observed);
 }
+
+#[test]
+fn get_prefix_bug() {
+    let mut trie = Trie::new();
+    trie.insert("abdc", 5);
+    trie.insert("abde", 6);
+    assert!(trie.get(&"abc").is_none());
+}

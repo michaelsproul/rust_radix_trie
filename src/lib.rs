@@ -217,17 +217,13 @@ macro_rules! get_node_function {
                 Some(ref $($mut_)* existing_child) => {
                     match match_keys(&key_fragments, &existing_child.key) {
                         KeyMatch::Full => Some(existing_child),
-                        KeyMatch::Partial(idx) => {
-                            let new_key_fragments = key_fragments.split(idx);
-                            $name(existing_child, new_key_fragments)
-                        },
-                        KeyMatch::FirstPrefix => None,
                         KeyMatch::SecondPrefix => {
                             let prefix_length = existing_child.key.len();
                             let new_key_fragments = key_fragments.split(prefix_length);
 
                             $name(existing_child, new_key_fragments)
                         }
+                        KeyMatch::Partial(_) | KeyMatch::FirstPrefix => None,
                     }
                 }
             }
