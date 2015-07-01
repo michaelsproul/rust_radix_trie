@@ -7,12 +7,14 @@ extern crate nibble_vec;
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use iter::{Iter, Keys, Values};
+pub use traversal::{Traversal, TraversalMut};
 
 use keys::{match_keys, check_keys, KeyMatch};
 use DeleteAction::*;
 
 mod keys;
 mod iter;
+mod traversal;
 #[cfg(test)] mod test;
 
 const BRANCH_FACTOR: usize = 16;
@@ -234,91 +236,11 @@ macro_rules! get_node_function {
 get_node_function!(name: get_node_mut, mutability: mut);
 get_node_function!(name: get_node, mutability: );
 
-/// Trait capturing a (mutable) traversal of a trie.
-///
-/// By providing functions for each of the different cases, it is possible to describe a number
-/// of different traversals. For now it's probably best to view the source for `run` to understand
-/// how best to implement each function.
-pub trait Traversal<'a, K, V> where K: TrieKey {
-    /// Key type to be threaded through by `run`, needn't be `K` (is often `&'a K`).
-    type Key: 'a;
-    /// Value type to be threaded through by `run`, needn't be `V` (is often `()`).
-    type Value: 'a;
-    /// Type returned by the entire traversal, for insert it's `Option<V>`.
-    type Result;
-
-    // FIXME: Use associated constants in the future.
-    fn default_result() -> Self::Result;
-
-    #[allow(unused)]
-    fn root_fn(root: &mut Trie<K, V>, key: Self::Key, value: Self::Value) -> Self::Result {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn no_child_fn(trie: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec, bucket: usize) -> Self::Result {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn full_match_fn(child: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec) -> Self::Result {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn partial_match_fn(child: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec, idx: usize) -> Self::Result {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn first_prefix_fn(child: &mut Trie<K, V>, key: Self::Key, value: Self::Value, nv: NibbleVec) -> Self::Result {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn action_fn(trie: &mut Trie<K, V>, intermediate: Self::Result, bucket: usize) -> Self::Result {
-        intermediate
-    }
-
-    /// Run the traversal, returning the result.
-    ///
-    /// Let `key_fragments` be the bits of the key which are valid for insertion *below*
-    /// the current node such that the 0th element of `key_fragments` describes the bucket
-    /// that this key would be inserted into.
-    fn run(trie: &mut Trie<K, V>, key: Self::Key, value: Self::Value, mut key_fragments: NibbleVec) -> Self::Result {
-        if key_fragments.len() == 0 {
-            return Self::root_fn(trie, key, value);
-        }
-
-        let bucket = key_fragments.get(0) as usize;
-
-        let intermediate = match trie.children[bucket] {
-            None => return Self::no_child_fn(trie, key, value, key_fragments, bucket),
-            Some(ref mut child) => {
-                match match_keys(&key_fragments, &child.key) {
-                    KeyMatch::Full =>
-                        Self::full_match_fn(child, key, value, key_fragments),
-                    KeyMatch::Partial(i) =>
-                        Self::partial_match_fn(child, key, value, key_fragments, i),
-                    KeyMatch::FirstPrefix =>
-                        Self::first_prefix_fn(child, key, value, key_fragments),
-                    KeyMatch::SecondPrefix => {
-                        let new_key = key_fragments.split(child.key.len());
-                        Self::run(child, key, value, new_key)
-                    }
-                }
-            }
-        };
-
-        Self::action_fn(trie, intermediate, bucket)
-    }
-}
-
 /// Traversal type implementing removal.
 #[allow(unused)]
 enum Remove {}
 
-impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Remove where K: TrieKey {
+impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
     type Key = &'a K;
     type Value = ();
     type Result = (Option<V>, DeleteAction<K, V>);
@@ -339,7 +261,11 @@ impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Remove where K: TrieKey {
     }
 
     fn action_fn
-    (trie: &mut Trie<K, V>, (value, action): (Option<V>, DeleteAction<K, V>), bucket: usize)
+    (
+        trie: &mut Trie<K, V>,
+        (value, action): (Option<V>, DeleteAction<K, V>),
+        bucket: usize
+    )
     -> Self::Result {
         // If a value has been removed, reduce the length of this trie.
         if value.is_some() {
@@ -366,7 +292,7 @@ impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Remove where K: TrieKey {
 #[allow(unused)]
 enum Insert {}
 
-impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Insert where K: TrieKey {
+impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
     type Key = K;
     type Value = V;
     type Result = Option<V>;
@@ -380,8 +306,9 @@ impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Insert where K: TrieKey {
     }
 
     // No child, insert directly.
-    fn no_child_fn(trie: &mut Trie<K, V>, key: K, value: V, key_fragments: NibbleVec, bucket: usize) -> Option<V> {
-        trie.add_child(bucket, Box::new(Trie::with_key_value(key_fragments, key, value)));
+    fn no_child_fn(trie: &mut Trie<K, V>, key: K, value: V, nv: NibbleVec, bucket: usize)
+    -> Option<V> {
+        trie.add_child(bucket, Box::new(Trie::with_key_value(nv, key, value)));
         None
     }
 
@@ -393,7 +320,13 @@ impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Insert where K: TrieKey {
     // Partial key match.
     // Split the existing node's key, insert a new child for the second half of the
     // key and insert the new key as a new child, with the prefix stripped.
-    fn partial_match_fn(child: &mut Trie<K, V>, key: K, value: V, mut key_fragments: NibbleVec, idx: usize) -> Option<V> {
+    fn partial_match_fn
+    (
+        child: &mut Trie<K, V>, key: K, value: V,
+        mut key_fragments: NibbleVec,
+        idx: usize
+    )
+    -> Option<V> {
         // Split the existing child.
         child.split(idx);
 
@@ -411,7 +344,8 @@ impl<'a, K: 'a, V: 'a> Traversal<'a, K, V> for Insert where K: TrieKey {
 
     // Key to insert is a prefix of the existing one.
     // Split the existing child and place its value below the new one.
-    fn first_prefix_fn(child: &mut Trie<K, V>, key: K, value: V, key_fragments: NibbleVec) -> Option<V> {
+    fn first_prefix_fn(child: &mut Trie<K, V>, key: K, value: V, key_fragments: NibbleVec)
+    -> Option<V> {
         child.split(key_fragments.len());
         child.add_key_value(key, value);
         None
