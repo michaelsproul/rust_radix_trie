@@ -8,7 +8,7 @@ pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use iter::{Iter, Keys, Values};
 
-use keys::{match_keys, check_keys, KeyMatch};
+use keys::check_keys;
 use DeleteAction::*;
 use traversal::{Traversal, RefTraversal, TraversalMut, RefTraversalMut};
 
@@ -144,7 +144,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Invariant: `result.is_some() => result.key_value.is_some()`.
     pub fn get_ancestor(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        self.get_ancestor_node_recursive(key_fragments)
+        GetAncestor::run(self, (), (), key_fragments)
     }
 
     /// Fetch the closest ancestor *value* for a given key.
@@ -348,6 +348,27 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
     }
 }
 
+// Traversal type implementing get_ancestor.
+#[allow(unused)]
+enum GetAncestor {}
+
+impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetAncestor where K: TrieKey {
+    type Key = ();
+    type Value = ();
+    type Result = Option<&'a Trie<K, V>>;
+
+    fn default_result() -> Self::Result { None }
+    fn root_fn(trie: &'a Trie<K, V>, _: (), _: ()) -> Self::Result {
+        trie.as_value_node()
+    }
+    fn full_match_fn(trie: &'a Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
+        trie.as_value_node()
+    }
+    fn action_fn(trie: &'a Trie<K, V>, result: Self::Result, _: usize) -> Self::Result {
+        result.or_else(|| trie.as_value_node())
+    }
+}
+
 // Implementation details.
 impl<K, V> Trie<K, V> where K: TrieKey {
     /// Create a Trie with no children.
@@ -432,33 +453,6 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Get a reference to this node if it has a value.
     fn as_value_node(&self) -> Option<&Trie<K, V>> {
         self.key_value.as_ref().map(|_| self)
-    }
-
-    fn get_ancestor_node_recursive(&self, mut key_fragments: NibbleVec)
-    -> Option<&Trie<K, V>> {
-        if key_fragments.len() == 0 {
-            return self.as_value_node();
-        }
-
-        let bucket = key_fragments.get(0) as usize;
-
-        let result = match self.children[bucket] {
-            None => None,
-            Some(ref existing_child) => {
-                match match_keys(&key_fragments, &existing_child.key) {
-                    KeyMatch::Full => existing_child.as_value_node(),
-                    KeyMatch::SecondPrefix => {
-                        let prefix_length = existing_child.key.len();
-                        let new_key_tail = key_fragments.split(prefix_length);
-
-                        existing_child.get_ancestor_node_recursive(new_key_tail)
-                    },
-                    KeyMatch::FirstPrefix | KeyMatch::Partial(_) => None,
-                }
-            }
-        };
-
-        result.or_else(|| self.as_value_node())
     }
 
     /// Having removed the value from a node, work out if the node itself should be deleted.
