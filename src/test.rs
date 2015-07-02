@@ -121,6 +121,14 @@ fn iter() {
 }
 
 #[test]
+fn get_descendant() {
+    let trie = test_trie();
+    assert_eq!(trie.get_descendant(&"abcdefgh").and_then(|t| t.value()), Some(&19));
+    assert_eq!(trie.get_descendant(&"abcdefg").and_then(|t| t.value()), Some(&19));
+    assert!(trie.get_descendant(&"acbg").is_none());
+}
+
+#[test]
 fn get_prefix_bug() {
     let mut trie = Trie::new();
     trie.insert("abdc", 5);

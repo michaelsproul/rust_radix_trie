@@ -12,6 +12,7 @@ macro_rules! if_else {
     (true, $x:expr, $y:expr) => { $x };
 }
 
+// FIXME: Use () default types once 1.2/1.3 lands.
 macro_rules! make_traversal_trait {
     (
         name: $name:ident,

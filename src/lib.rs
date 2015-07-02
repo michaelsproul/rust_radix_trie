@@ -154,6 +154,14 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.get_ancestor(key).and_then(|t| t.value())
     }
 
+    /// Fetch the closest descendant for a given key.
+    ///
+    /// If the key is in the trie, this is the same as `get_node`.
+    pub fn get_descendant(&self, key: &K) -> Option<&Trie<K, V>> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        GetDescendant::run(self, (), (), key_fragments)
+    }
+
     /// Insert the given key-value pair, returning any previous value associated with the key.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
@@ -366,6 +374,24 @@ impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetAncestor where K: TrieKey {
     }
     fn action_fn(trie: &'a Trie<K, V>, result: Self::Result, _: usize) -> Self::Result {
         result.or_else(|| trie.as_value_node())
+    }
+}
+
+#[allow(unused)]
+enum GetDescendant {}
+
+impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetDescendant where K: TrieKey {
+    type Key = ();
+    type Value = ();
+    type Result = Option<&'a Trie<K, V>>;
+
+    fn default_result() -> Self::Result { None }
+    fn root_fn(trie: &'a Trie<K, V>, _: (), _: ()) -> Self::Result { Some(trie) }
+    fn full_match_fn(trie: &'a Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
+        Some(trie)
+    }
+    fn first_prefix_fn(trie: &'a Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
+        Some(trie)
     }
 }
 
