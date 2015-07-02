@@ -8,10 +8,13 @@ This is a [Radix Trie][radix-wiki] implementation in Rust, building on the lesso
 
 You can read about my experience implementing this data structure [here][radix-paper].
 
+While I'm confident about the structure of the code, it hasn't been heavily tested and there
+may be some bugs. If you'd like to use this library please contribute some QuickCheck tests :)
+
 # Features
 
 * Compressed nodes. Common key prefixes are stored only once.
-* Trie-specific methods to look-up predecessors (closest ancestors).
+* Trie-specific methods to look-up closest ancestors and descendants.
 * Key Generic. Any type that can be serialised as a vector of bytes can be used as a key.
 * Safe - no unsafe code.
 
@@ -30,9 +33,9 @@ https://michaelsproul.github.io/rust_radix_trie/
 
 # To Do
 
-* Optimise (make a `NibbleSlice`, see [paper][radix-paper]).
 * QuickCheck tests.
-* Successor methods?
+* Child iterator (easy).
+* Optimise (make a `NibbleSlice`, see [paper][radix-paper]).
 * Implement the Entry API?
 
 # License
