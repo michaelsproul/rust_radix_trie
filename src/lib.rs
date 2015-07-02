@@ -7,14 +7,14 @@ extern crate nibble_vec;
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use iter::{Iter, Keys, Values};
-pub use traversal::{Traversal, TraversalMut};
 
 use keys::{match_keys, check_keys, KeyMatch};
 use DeleteAction::*;
+use traversal::{Traversal, RefTraversal, TraversalMut, RefTraversalMut};
 
 mod keys;
 mod iter;
-mod traversal;
+#[macro_use] pub mod traversal;
 #[cfg(test)] mod test;
 
 const BRANCH_FACTOR: usize = 16;
@@ -123,7 +123,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Fetch a mutable reference to the given key's corresponding value, if any.
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get_node_mut(self, key_fragments).and_then(|t| t.value_checked_mut(key))
+        GetNodeMut::run(self, (), (), key_fragments).and_then(|t| t.value_checked_mut(key))
     }
 
     /// Fetch a reference to the given key's corresponding node, if any.
@@ -132,7 +132,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// subtries directly violates the key-structure of the trie.
     pub fn get_node(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        get_node(self, key_fragments)
+        GetNode::run(self, (), (), key_fragments)
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
@@ -192,49 +192,37 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 }
 
-/// Identity macro to allow expansion of the "mutability" token tree.
-macro_rules! id {
-    ($e:item) => { $e }
-}
-
-/// Macro to parametrise over mutability in get_node methods.
-macro_rules! get_node_function {
+macro_rules! impl_get_traversal {
     (
         name: $name:ident,
+        traversal: $traversal:ident,
         mutability: $($mut_:tt)*
-    ) => {
-        id!(fn $name<'a, K, V>(
-            trie: &'a $($mut_)* Trie<K, V>,
-            mut key_fragments: NibbleVec
-        ) -> Option<&'a $($mut_)* Trie<K, V>> where K: TrieKey {
-            // Handle retrieval at the root.
-            if key_fragments.len() == 0 {
-                return Some(trie);
-            }
+    ) => { id! {
 
-            let bucket = key_fragments.get(0) as usize;
+impl<'a, K: 'a, V: 'a> $traversal<'a, K, V> for $name where K: TrieKey {
+    type Key = ();
+    type Value = ();
+    type Result = Option<&'a $($mut_)* Trie<K, V>>;
 
-            match trie.children[bucket] {
-                None => None,
-                Some(ref $($mut_)* existing_child) => {
-                    match match_keys(&key_fragments, &existing_child.key) {
-                        KeyMatch::Full => Some(existing_child),
-                        KeyMatch::SecondPrefix => {
-                            let prefix_length = existing_child.key.len();
-                            let new_key_fragments = key_fragments.split(prefix_length);
-
-                            $name(existing_child, new_key_fragments)
-                        }
-                        KeyMatch::Partial(_) | KeyMatch::FirstPrefix => None,
-                    }
-                }
-            }
-        });
+    fn default_result() -> Self::Result { None }
+    fn root_fn(root: &'a $($mut_)* Trie<K, V>, _: (), _: ()) -> Self::Result {
+        Some(root)
+    }
+    fn full_match_fn(child: &'a $($mut_)* Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
+        Some(child)
     }
 }
 
-get_node_function!(name: get_node_mut, mutability: mut);
-get_node_function!(name: get_node, mutability: );
+}} // end macro body.
+}
+
+#[allow(unused)]
+enum GetNode {}
+#[allow(unused)]
+enum GetNodeMut {}
+
+impl_get_traversal!(name: GetNode, traversal: RefTraversal, mutability: );
+impl_get_traversal!(name: GetNodeMut, traversal: RefTraversalMut, mutability: mut);
 
 /// Traversal type implementing removal.
 #[allow(unused)]
