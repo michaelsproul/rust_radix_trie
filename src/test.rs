@@ -43,6 +43,17 @@ fn get_node() {
     assert!(trie.get_node(&"h").is_none());
     assert!(trie.get_node(&"hello").is_some());
 }
+#[test]
+fn get_node_string() {
+    let mut trie = Trie::new();
+    trie.insert("hello".to_string(), 55);
+
+    let h = "h".to_string();
+    let hello = "hello".to_string();
+
+    assert!(trie.get_node(&h).is_none());
+    assert!(trie.get_node(&hello).is_some());
+}
 
 #[test]
 fn empty_key() {

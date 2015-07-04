@@ -58,3 +58,9 @@ impl<'a> TrieKey for &'a str {
         self.as_bytes().to_vec()
     }
 }
+
+impl TrieKey for String {
+    fn encode(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+}
