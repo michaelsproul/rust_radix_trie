@@ -172,9 +172,13 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn remove(&mut self, key: &K) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
 
-        // Use the recursive removal function but ignore its delete action.
-        // The root can't be replaced or deleted.
-        Remove::run(self, key, (), key_fragments).0
+        let result = Remove::run(self, key, (), key_fragments);
+        match result.1 {
+            Replace(node) => *self = *node,
+            Delete => *self = ::Trie::new(),
+            _ => (),
+        }
+        return result.0;
     }
 
     /// Return an iterator over the keys and values of the Trie.
