@@ -154,3 +154,14 @@ fn get_ancestor_bug() {
     trie.insert("abcde", 2);
     assert_eq!(trie.get_ancestor_value(&"abcdz"), Some(&1));
 }
+
+#[test]
+fn root_replace_bug() {
+    let mut trie = Trie::new();
+    trie.insert("a", ());
+    trie.insert("p", ());
+    trie.remove(&"a");
+    assert_eq!(trie.len(), 1);
+    trie.remove(&"p");
+    assert_eq!(trie.len(), 0);    
+}
