@@ -139,7 +139,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Fetch a mutable reference to the given key's corresponding value, if any.
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        GetNodeMut::run(self, (), (), key_fragments).and_then(|t| t.value_checked_mut(key))
+        GetNodeMut::run(self, (), key_fragments).and_then(|t| t.value_checked_mut(key))
     }
 
     /// Fetch a reference to the given key's corresponding node, if any.
@@ -148,7 +148,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// subtries directly violates the key-structure of the trie.
     pub fn get_node(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        GetNode::run(self, (), (), key_fragments)
+        GetNode::run(self, (), key_fragments)
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
@@ -160,7 +160,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Invariant: `result.is_some() => result.key_value.is_some()`.
     pub fn get_ancestor(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        GetAncestor::run(self, (), (), key_fragments)
+        GetAncestor::run(self, (), key_fragments)
     }
 
     /// Fetch the closest ancestor *value* for a given key.
@@ -175,13 +175,13 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// If the key is in the trie, this is the same as `get_node`.
     pub fn get_descendant(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        GetDescendant::run(self, (), (), key_fragments)
+        GetDescendant::run(self, (), key_fragments)
     }
 
     /// Insert the given key-value pair, returning any previous value associated with the key.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
-        Insert::run(self, key, value, key_fragments)
+        Insert::run(self, (key, value), key_fragments)
     }
 
     /// Remove and return the value associated with the given key.
@@ -190,7 +190,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
 
         // Use the recursive removal function but ignore its delete action.
         // `delete_node` ensures that `Replace(x)` is never returned for the root.
-        let (result, action) = Remove::run(self, key, (), key_fragments);
+        let (result, action) = Remove::run(self, key, key_fragments);
         debug_assert!(action.is_delete() || action.is_do_nothing());
         result
     }
@@ -226,16 +226,12 @@ macro_rules! impl_get_traversal {
     ) => { id! {
 
 impl<'a, K: 'a, V: 'a> $traversal<'a, K, V> for $name where K: TrieKey {
-    type Key = ();
-    type Value = ();
-    type Result = Option<&'a $($mut_)* Trie<K, V>>;
+    type Input = ();
+    type Output = Option<&'a $($mut_)* Trie<K, V>>;
 
-    fn default_result() -> Self::Result { None }
-    fn root_fn(root: &'a $($mut_)* Trie<K, V>, _: (), _: ()) -> Self::Result {
+    fn default_result() -> Self::Output { None }
+    fn match_fn(root: &'a $($mut_)* Trie<K, V>, _: ()) -> Self::Output {
         Some(root)
-    }
-    fn full_match_fn(child: &'a $($mut_)* Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
-        Some(child)
     }
 }
 
@@ -255,23 +251,15 @@ impl_get_traversal!(name: GetNodeMut, traversal: RefTraversalMut, mutability: mu
 enum Remove {}
 
 impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
-    type Key = &'a K;
-    type Value = ();
-    type Result = (Option<V>, DeleteAction<K, V>);
+    type Input = &'a K;
+    type Output = (Option<V>, DeleteAction<K, V>);
 
-    fn default_result() -> Self::Result {
+    fn default_result() -> Self::Output {
         (None, DoNothing)
     }
 
-    fn root_fn(root: &mut Trie<K, V>, key: &K, _: ()) -> Self::Result {
-        (root.take_value(key), DoNothing)
-    }
-
-    fn full_match_fn(child: &mut Trie<K, V>, key: &K, _: (), _: NibbleVec) -> Self::Result {
-        match child.take_value(key) {
-            Some(value) => (Some(value), child.delete_node()),
-            None => (None, DoNothing)
-        }
+    fn match_fn(root: &mut Trie<K, V>, key: &K) -> Self::Output {
+        (root.take_value(key), root.delete_node())
     }
 
     fn action_fn
@@ -280,7 +268,7 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
         (value, action): (Option<V>, DeleteAction<K, V>),
         bucket: usize
     )
-    -> Self::Result {
+    -> Self::Output {
         // If a value has been removed, reduce the length of this trie.
         if value.is_some() {
             trie.length -= 1;
@@ -307,28 +295,23 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
 enum Insert {}
 
 impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
-    type Key = K;
-    type Value = V;
-    type Result = Option<V>;
+    type Input = (K, V);
+    type Output = Option<V>;
 
     fn default_result() -> Option<V> {
         None
     }
 
-    fn root_fn(root: &mut Trie<K, V>, key: K, value: V) -> Option<V> {
-        root.replace_value(key, value)
+    // Full key match. Replace existing.
+    fn match_fn(trie: &mut Trie<K, V>, (key, value): (K, V)) -> Option<V> {
+        trie.replace_value(key, value)
     }
 
     // No child, insert directly.
-    fn no_child_fn(trie: &mut Trie<K, V>, key: K, value: V, nv: NibbleVec, bucket: usize)
+    fn no_child_fn(trie: &mut Trie<K, V>, (key, value): (K, V), nv: NibbleVec, bucket: usize)
     -> Option<V> {
         trie.add_child(bucket, Box::new(Trie::with_key_value(nv, key, value)));
         None
-    }
-
-    // Full key match. Replace existing.
-    fn full_match_fn(child: &mut Trie<K, V>, key: K, value: V, _: NibbleVec) -> Option<V> {
-        child.replace_value(key, value)
     }
 
     // Partial key match.
@@ -336,7 +319,7 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
     // key and insert the new key as a new child, with the prefix stripped.
     fn partial_match_fn
     (
-        child: &mut Trie<K, V>, key: K, value: V,
+        child: &mut Trie<K, V>, (key, value): (K, V),
         mut key_fragments: NibbleVec,
         idx: usize
     )
@@ -358,14 +341,14 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
 
     // Key to insert is a prefix of the existing one.
     // Split the existing child and place its value below the new one.
-    fn first_prefix_fn(child: &mut Trie<K, V>, key: K, value: V, key_fragments: NibbleVec)
+    fn first_prefix_fn(child: &mut Trie<K, V>, (key, value): (K, V), key_fragments: NibbleVec)
     -> Option<V> {
         child.split(key_fragments.len());
         child.add_key_value(key, value);
         None
     }
 
-    fn action_fn(trie: &mut Trie<K, V>, previous_value: Option<V>, _: usize) -> Self::Result {
+    fn action_fn(trie: &mut Trie<K, V>, previous_value: Option<V>, _: usize) -> Self::Output {
         // If there's no previous value, increase the length of the trie.
         if previous_value.is_none() {
             trie.length += 1;
@@ -379,18 +362,14 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
 enum GetAncestor {}
 
 impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetAncestor where K: TrieKey {
-    type Key = ();
-    type Value = ();
-    type Result = Option<&'a Trie<K, V>>;
+    type Input = ();
+    type Output = Option<&'a Trie<K, V>>;
 
-    fn default_result() -> Self::Result { None }
-    fn root_fn(trie: &'a Trie<K, V>, _: (), _: ()) -> Self::Result {
+    fn default_result() -> Self::Output { None }
+    fn match_fn(trie: &'a Trie<K, V>, _: ()) -> Self::Output {
         trie.as_value_node()
     }
-    fn full_match_fn(trie: &'a Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
-        trie.as_value_node()
-    }
-    fn action_fn(trie: &'a Trie<K, V>, result: Self::Result, _: usize) -> Self::Result {
+    fn action_fn(trie: &'a Trie<K, V>, result: Self::Output, _: usize) -> Self::Output {
         result.or_else(|| trie.as_value_node())
     }
 }
@@ -399,16 +378,12 @@ impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetAncestor where K: TrieKey {
 enum GetDescendant {}
 
 impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetDescendant where K: TrieKey {
-    type Key = ();
-    type Value = ();
-    type Result = Option<&'a Trie<K, V>>;
+    type Input = ();
+    type Output = Option<&'a Trie<K, V>>;
 
-    fn default_result() -> Self::Result { None }
-    fn root_fn(trie: &'a Trie<K, V>, _: (), _: ()) -> Self::Result { Some(trie) }
-    fn full_match_fn(trie: &'a Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
-        Some(trie)
-    }
-    fn first_prefix_fn(trie: &'a Trie<K, V>, _: (), _: (), _: NibbleVec) -> Self::Result {
+    fn default_result() -> Self::Output { None }
+    fn match_fn(trie: &'a Trie<K, V>, _: ()) -> Self::Output { Some(trie) }
+    fn first_prefix_fn(trie: &'a Trie<K, V>, _: (), _: NibbleVec) -> Self::Output {
         Some(trie)
     }
 }
