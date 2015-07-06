@@ -1,7 +1,7 @@
 [package]
 
 name = "radix_trie"
-version = "0.0.6"
+version = "0.0.7"
 description = "Generic radix trie data-structure."
 
 license = "MIT"
