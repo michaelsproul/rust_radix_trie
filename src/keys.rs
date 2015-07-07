@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use NibbleVec;
 
 /// Trait for types which can be used to key a Radix Trie.
@@ -9,7 +8,7 @@ use NibbleVec;
 ///
 /// If a type fails to implement this trait correctly, the Radix Trie will panic upon
 /// encountering a conflict. Be careful!
-pub trait TrieKey: PartialEq + Eq + Debug {
+pub trait TrieKey: PartialEq + Eq {
     /// Encode a value as a vector of bytes.
     fn encode(&self) -> Vec<u8>;
 }
@@ -47,20 +46,14 @@ pub fn match_keys(first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
 /// Check two keys for equality and panic if they differ.
 pub fn check_keys<K>(key1: &K, key2: &K) where K: TrieKey {
     if *key1 != *key2 {
-        panic!("multiple-keys with the same bit representation.\n{:?}\n{:?}", key1, key2);
+        panic!("multiple-keys with the same bit representation.");
     }
 }
 
 /// --- TrieKey Implementations for standard types --- ///
 
-impl<'a> TrieKey for &'a str {
+impl<T> TrieKey for T where T: Into<Vec<u8>> + Clone + Eq + PartialEq {
     fn encode(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
-}
-
-impl TrieKey for String {
-    fn encode(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+        self.clone().into()
     }
 }

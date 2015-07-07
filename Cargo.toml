@@ -15,3 +15,8 @@ keywords = ["trie", "patricia", "collection", "generic", "prefix"]
 [dependencies]
 
 nibble_vec = "*"
+
+[dev-dependencies]
+
+quickcheck = "*"
+rand = "*"

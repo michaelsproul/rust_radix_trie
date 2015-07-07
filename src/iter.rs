@@ -1,7 +1,7 @@
 use std::slice;
-use std::iter::{Map, FilterMap};
+use std::iter::{Map, FilterMap, FromIterator};
 
-use Trie;
+use {Trie, TrieKey};
 
 // MY EYES.
 type Child<K, V> = Box<Trie<K, V>>;
@@ -127,5 +127,15 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
                 Pop => { self.stack.pop(); }
             }
         }
+    }
+}
+
+impl<K, V> FromIterator<(K, V)> for Trie<K, V> where K: TrieKey {
+    fn from_iter<T>(iter: T) -> Trie<K, V> where T: IntoIterator<Item=(K, V)> {
+        let mut trie = Trie::new();
+        for (k, v) in iter {
+            trie.insert(k, v);
+        }
+        trie
     }
 }

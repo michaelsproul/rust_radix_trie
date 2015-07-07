@@ -3,6 +3,8 @@
 //! To get started, see the docs for `Trie` below.
 
 extern crate nibble_vec;
+#[cfg(test)] extern crate quickcheck;
+#[cfg(test)] extern crate rand;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
@@ -16,6 +18,7 @@ mod keys;
 mod iter;
 #[macro_use] pub mod traversal;
 #[cfg(test)] mod test;
+#[cfg(test)] mod qc_test;
 
 const BRANCH_FACTOR: usize = 16;
 
