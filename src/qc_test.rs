@@ -118,7 +118,6 @@ fn get_node() {
         // Check that nodes for non-inserted keys don't have values.
         for k in keys.iter().skip(half) {
             if let Some(node) = trie.get_node(&k) {
-                println!("We got us a value!");
                 if node.value().is_some() { return false }
             }
         }
