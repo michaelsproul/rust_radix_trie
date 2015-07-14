@@ -14,7 +14,7 @@
 //! * `Traversal` - immutable trie, references not allowed in `Output` type.
 //! * `RefTraversal` - immutable trie, references allowed in `Output` type.
 //! * `TraversalMut` - mutable trie, references not allowed in `Output` type.
-//! * `RefTraversalMut` - mutable trie, references allowed in `Output` type.
+//! * `RefTraversalMut` - mutable trie, references allowed in `Output` type, no `action_fn`.
 
 use {Trie, TrieKey, NibbleVec};
 use keys::{match_keys, KeyMatch};
@@ -76,7 +76,7 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
     }
 
     // FIXME: Don't generate action_fn at all (cf. Rust issue #4621).
-    #[doc = "Note: this function isn't called in a `RefTraversal`/`RefTraversalMut`."]
+    #[doc = "Note: this function isn't called in a `RefTraversalMut`."]
     #[allow(unused)]
     fn action_fn(trie: $trie_type, intermediate: Self::Output, bucket: usize) -> Self::Output {
         intermediate
