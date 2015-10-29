@@ -30,7 +30,7 @@ macro_rules! if_else {
     (true, $x:expr, $y:expr) => { $x };
 }
 
-// FIXME: Use () default input type once 1.2/1.3 lands.
+// NOTE: Use () default input type once `associated_type_defaults` stabilises.
 macro_rules! make_traversal_trait {
     (
         name: $name:ident,
@@ -75,7 +75,7 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
         Self::default_result()
     }
 
-    // FIXME: Don't generate action_fn at all (cf. Rust issue #4621).
+    // NOTE: Don't generate action_fn at all (cf. Rust issue #4621).
     #[doc = "Note: this function isn't called in a `RefTraversalMut`."]
     #[allow(unused)]
     fn action_fn(trie: $trie_type, intermediate: Self::Output, bucket: usize) -> Self::Output {
