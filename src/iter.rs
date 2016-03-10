@@ -4,10 +4,10 @@ use std::iter::{Map, FilterMap, FromIterator};
 use {Trie, TrieKey};
 
 // MY EYES.
-type Child<K, V> = Box<Trie<K, V>>;
-type RawChildIter<'a, K, V> = slice::Iter<'a, Option<Child<K, V>>>;
-type ChildMapFn<'a, K, V> = fn(&'a Option<Child<K, V>>) -> Option<&'a Child<K, V>>;
-type ChildIter<'a, K, V> = FilterMap<RawChildIter<'a, K, V>, ChildMapFn<'a, K, V>>;
+pub type Child<K, V> = Box<Trie<K, V>>;
+pub type RawChildIter<'a, K, V> = slice::Iter<'a, Option<Child<K, V>>>;
+pub type ChildMapFn<'a, K, V> = fn(&'a Option<Child<K, V>>) -> Option<&'a Child<K, V>>;
+pub type ChildIter<'a, K, V> = FilterMap<RawChildIter<'a, K, V>, ChildMapFn<'a, K, V>>;
 
 /// Iterator over the keys and values of a Trie.
 pub struct Iter<'a, K: 'a, V: 'a> {
@@ -72,7 +72,7 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
 
 impl<K, V> Trie<K, V> {
     /// Helper function to get all the non-empty children of a node.
-    fn child_iter<'a>(&'a self) -> ChildIter<'a, K, V> {
+    pub fn child_iter<'a>(&'a self) -> ChildIter<'a, K, V> {
         fn id<'b, K, V>(x: &'b Option<Child<K, V>>) -> Option<&'b Child<K, V>> {
             x.as_ref()
         }
