@@ -91,6 +91,8 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
         let bucket = key_fragments.get(0) as usize;
 
         let intermediate = match trie.children[bucket] {
+            // FIXME: It would probably be wise to not return early here,
+            // so that the action_fn can be called consistently (insert is problematic ATM).
             None => return Self::no_child_fn(trie, input, key_fragments, bucket),
             Some(ref $($mut_)* child) => {
                 match match_keys(&key_fragments, &child.key) {

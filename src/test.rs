@@ -123,6 +123,31 @@ fn nearest_ancestor() {
 }
 
 #[test]
+fn nearest_ancestor_no_child_fn() {
+    let mut t = Trie::new();
+    t.insert("ab", 5);
+    let anc = t.get_ancestor(&"abc");
+    assert_eq!(*anc.and_then(Trie::value).unwrap(), 5);
+}
+
+#[test]
+fn raw_ancestor() {
+    let mut t = Trie::new();
+
+    for &(key, _) in &TEST_DATA {
+        assert_eq!(t.get_raw_ancestor(&key).key(), t.key());
+    }
+
+    t.insert("wow", 0);
+    t.insert("hella", 1);
+    t.insert("hellb", 2);
+
+    // Ancestor should be "hell" node.
+    let anc = t.get_raw_ancestor(&"hello");
+    assert_eq!(anc.len(), 2);
+}
+
+#[test]
 fn iter() {
     type Set = HashSet<(&'static str, u32)>;
     let trie = test_trie();
