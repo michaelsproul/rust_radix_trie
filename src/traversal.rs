@@ -46,6 +46,7 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
 
     #[allow(unused)]
     fn match_fn(trie: $trie_type, input: Self::Input) -> Self::Output {
+        println!("match_fn");
         Self::default_result()
     }
 
@@ -55,23 +56,27 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
         trie: $trie_type, input: Self::Input,
         nv: NibbleVec, bucket: usize
     ) -> Self::Output {
+        println!("no_child, bucket is: {}", bucket);
         Self::default_result()
     }
 
     #[doc = "Defaults to `match_fn`."]
     #[allow(unused)]
     fn child_match_fn(child: $trie_type, input: Self::Input, nv: NibbleVec) -> Self::Output {
+        println!("child_match");
         Self::match_fn(child, input)
     }
 
     #[allow(unused)]
     fn partial_match_fn(child: $trie_type, input: Self::Input, nv: NibbleVec, idx: usize)
     -> Self::Output {
+        println!("partial_match");
         Self::default_result()
     }
 
     #[allow(unused)]
     fn first_prefix_fn(trie: $trie_type, input: Self::Input, nv: NibbleVec) -> Self::Output {
+        println!("first_prefix");
         Self::default_result()
     }
 
@@ -91,7 +96,7 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
         let bucket = key_fragments.get(0) as usize;
 
         let intermediate = match trie.children[bucket] {
-            None => return Self::no_child_fn(trie, input, key_fragments, bucket),
+            None => Self::no_child_fn(trie, input, key_fragments, bucket),
             Some(ref $($mut_)* child) => {
                 match match_keys(&key_fragments, &child.key) {
                     KeyMatch::Full =>

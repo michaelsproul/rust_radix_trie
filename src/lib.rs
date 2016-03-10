@@ -166,6 +166,10 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         GetAncestor::run(self, (), key_fragments)
     }
 
+    pub fn get_raw_ancestor(&self, key: &K) -> &Trie<K, V> {
+        GetRawAncestor::run(self, (), NibbleVec::from_byte_vec(key.encode())).unwrap()
+    }
+
     /// Fetch the closest ancestor *value* for a given key.
     ///
     /// See `get_ancestor` for precise semantics, this is just a shortcut.
@@ -374,6 +378,26 @@ impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetAncestor where K: TrieKey {
     }
     fn action_fn(trie: &'a Trie<K, V>, result: Self::Output, _: usize) -> Self::Output {
         result.or_else(|| trie.as_value_node())
+    }
+}
+
+// Traversal for getting the nearest ancestor, regardless of whether it has a value or not.
+enum GetRawAncestor {}
+
+impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetRawAncestor where K: TrieKey {
+    type Input = ();
+    type Output = Option<&'a Trie<K, V>>;
+
+    fn default_result() -> Self::Output { None }
+
+    fn match_fn(trie: &'a Trie<K, V>, _: ()) -> Self::Output {
+        println!("match_fn");
+        Some(trie)
+    }
+
+    fn action_fn(trie: &'a Trie<K, V>, result: Self::Output, _: usize) -> Self::Output {
+        println!("action_fn, result is some? {}", result.is_some());
+        result.or(Some(trie))
     }
 }
 
