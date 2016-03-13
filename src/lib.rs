@@ -62,6 +62,16 @@ pub struct Trie<K, V> {
     children: [Option<Box<Trie<K, V>>>; BRANCH_FACTOR],
 }
 
+/// Structure to store a series of key fragments to prepend to all following keys
+#[derive(Debug)]
+pub struct Root<'a, K: 'a, V: 'a> {
+    /// Key fragments to prepend to all following keys, allowing for a subtrie
+    prefix: NibbleVec,
+
+    /// The rest of the Trie
+    trie: &'a Trie<K, V>
+}
+
 #[derive(Debug)]
 struct KeyValue<K, V> {
     key: K,
@@ -87,6 +97,30 @@ impl<K, V> DeleteAction<K, V> {
         match *self {
             DoNothing => true,
             _ => false
+        }
+    }
+}
+
+impl<'a, K, V> Root<'a, K, V> where K: 'a + TrieKey, V: 'a {
+    pub fn new(prefix: NibbleVec, trie: &'a Trie<K, V>) -> Root<'a, K, V> {
+        Root {
+            prefix: prefix,
+            trie: trie
+        }
+    }
+
+    pub fn get(&self, key: &K) -> Option<&V> {
+        self.get_node(key).and_then(|t| t.value_checked(key))
+    }
+
+    pub fn get_node(&self, key: &K) -> Option<&Trie<K, V>> {
+        let mut raw_key = NibbleVec::from_byte_vec(key.encode());
+        let key_fragments = raw_key.split(self.prefix.len() + 1);
+
+        if raw_key == self.prefix.clone().join(&self.trie.key) {
+            GetNode::run(self.trie, (), key_fragments)
+        } else {
+            None
         }
     }
 }
@@ -152,6 +186,12 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn get_node(&self, key: &K) -> Option<&Trie<K, V>> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
         GetNode::run(self, (), key_fragments)
+    }
+
+    /// Fetch a root node containing a prefix and the rest of the Trie
+    pub fn get_node_root<'a>(&'a self, key: &K) -> Option<Root<'a, K, V>> {
+        let key_fragments = NibbleVec::from_byte_vec(key.encode());
+        GetNodeRoot::run(self, None, key_fragments)
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
@@ -248,6 +288,28 @@ enum GetNodeMut {}
 
 impl_get_traversal!(name: GetNode, traversal: RefTraversal, mutability: );
 impl_get_traversal!(name: GetNodeMut, traversal: RefTraversalMut, mutability: mut);
+
+#[allow(unused)]
+enum GetNodeRoot {}
+
+impl<'a, K, V> RefTraversal<'a, K, V> for GetNodeRoot where K: 'a + TrieKey, V: 'a {
+    type Input = Option<NibbleVec>;
+    type Output = Option<Root<'a, K, V>>;
+
+    fn default_result() -> Self::Output { None }
+    fn child_match_fn(trie: &'a Trie<K, V>, input: Self::Input, prefix: NibbleVec) -> Self::Output {
+        Some(Root::new(input.unwrap_or(NibbleVec::new()), trie))
+    }
+
+    fn second_prefix_fn(trie: &'a Trie<K, V>, mut input: Self::Input, nv: NibbleVec, old_key: NibbleVec) -> Self::Output {
+        input = input.map_or(Some(old_key.clone()), |i| Some(i.join(&old_key)));
+        Self::run(trie, input, nv)
+    }
+
+    fn action_fn(trie: &'a Trie<K, V>, intermediate: Self::Output, bucket: usize) -> Self::Output {
+        intermediate
+    }
+}
 
 /// Traversal type implementing removal.
 #[allow(unused)]

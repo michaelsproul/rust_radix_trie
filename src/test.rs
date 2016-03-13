@@ -1,5 +1,7 @@
 use std::collections::HashSet;
-use Trie;
+use {Trie, TrieKey};
+use NibbleVec;
+
 
 const TEST_DATA: [(&'static str, u32); 7] = [
         ("abcdefgh", 19),
@@ -164,4 +166,14 @@ fn root_replace_bug() {
     assert_eq!(trie.len(), 1);
     trie.remove(&"p");
     assert_eq!(trie.len(), 0);    
+}
+
+#[test]
+fn context_of_parent() {
+    let trie = test_trie();
+    println!("\n\nNOW THE REAL STUFF:");
+    let node = trie.get_node_root(&"ab").unwrap();
+    println!("node: {:#?}", node);
+    assert!(node.get_node(&"abcd").is_some());
+    assert_eq!(node.get(&"abcd").unwrap(), &17);
 }

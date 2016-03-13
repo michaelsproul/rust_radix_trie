@@ -82,6 +82,10 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
         intermediate
     }
 
+    fn second_prefix_fn(trie: $trie_type, input: Self::Input, nv: NibbleVec, old_key: NibbleVec) -> Self::Output {
+        Self::run(trie, input, nv)
+    }
+
     #[doc = "Run the traversal, returning the result."]
     fn run(trie: $trie_type, input: Self::Input, mut key_fragments: NibbleVec) -> Self::Output {
         if key_fragments.len() == 0 {
@@ -102,7 +106,7 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
                         Self::first_prefix_fn(child, input, key_fragments),
                     KeyMatch::SecondPrefix => {
                         let new_key = key_fragments.split(child.key.len());
-                        Self::run(child, input, new_key)
+                        Self::second_prefix_fn(child, input, new_key, key_fragments)
                     }
                 }
             }
