@@ -159,13 +159,9 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// If no value is stored at `key`, store `default`.
     pub fn map_with_default<F>(&mut self, key : K, f : F, default: V) where F: Fn(&mut V) {
         {
-            let v = self.get_mut(&key);
-            match v {
-                Some(v) => {
-                    f(v);
-                    return;
-                }
-                None => ()
+            if let Some(v) = self.get_mut(&key) {
+                f(v);
+                return;
             }
         }
         self.insert(key,default);
