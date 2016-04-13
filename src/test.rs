@@ -85,6 +85,15 @@ fn insert_replace() {
 }
 
 #[test]
+fn map_with_default() {
+    let mut trie = test_trie();
+    trie.map_with_default(&"abcd",{|x| *x = *x+1},42);
+    assert_eq!(*trie.get(&"abcd").unwrap(),17+1);
+    trie.map_with_default(&"zzz",{|x| *x = *x+1},42);
+    assert_eq!(*trie.get(&"zzz").unwrap(),42);
+}
+
+#[test]
 fn remove() {
     let mut trie = test_trie();
 

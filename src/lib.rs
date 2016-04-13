@@ -154,6 +154,19 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         GetNode::run(self, (), key_fragments)
     }
 
+    /// Take a function `f` and apply it to the value stored at `key`. 
+    /// 
+    /// If no value is stored at `key`, store `default`.
+    pub fn map_with_default<F>(&mut self, key : K, f : F, default: V) where F: Fn(&mut V) {
+        {
+            if let Some(v) = self.get_mut(&key) {
+                f(v);
+                return;
+            }
+        }
+        self.insert(key,default);
+    }
+
     /// Fetch a reference to the closest ancestor node of the given key.
     ///
     /// If `key` is encoded as byte-vector `b`, return the node `n` in the tree
