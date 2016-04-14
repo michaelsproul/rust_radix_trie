@@ -2,7 +2,7 @@
 
 use {Trie, TrieKey};
 use std::iter::FromIterator;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use quickcheck::{quickcheck, Gen, Arbitrary};
 use rand::Rng;
 
@@ -125,5 +125,46 @@ fn get_node() {
         true
     }
 
+    quickcheck(prop as fn(RandomKeys) -> bool);
+}
+
+// Construct a trie from a set of keys, with each key mapped to its length.
+fn length_trie(keys: HashSet<Key>) -> Trie<Key, usize> {
+    let mut t = Trie::new();
+    for k in keys {
+        let len = k.len();
+        t.insert(k, len);
+    }
+    t
+}
+
+#[test]
+fn keys_iter() {
+    fn prop(RandomKeys(keys): RandomKeys) -> bool {
+        let trie = length_trie(keys.clone());
+        let trie_keys: HashSet<Key> = trie.keys().cloned().collect();
+        trie_keys == keys
+    }
+    quickcheck(prop as fn(RandomKeys) -> bool);
+}
+
+#[test]
+fn values_iter() {
+    // Create a map of values to frequencies.
+    fn frequency_map<I: Iterator<Item=usize>>(values: I) -> HashMap<usize, u64> {
+        let mut map = HashMap::new();
+        for v in values {
+            let current_val = map.entry(v).or_insert(0);
+            *current_val += 1;
+        }
+        map
+    }
+
+    fn prop(RandomKeys(keys): RandomKeys) -> bool {
+        let trie = length_trie(keys.clone());
+        let trie_values: HashMap<usize, u64> = frequency_map(trie.values().cloned());
+        let key_values = frequency_map(keys.into_iter().map(|k| k.len()));
+        trie_values == key_values
+    }
     quickcheck(prop as fn(RandomKeys) -> bool);
 }
