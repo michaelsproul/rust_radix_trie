@@ -12,7 +12,7 @@ pub use iter::{Iter, Keys, Values};
 
 use keys::check_keys;
 use DeleteAction::*;
-use traversal::{Traversal, RefTraversal, TraversalMut, RefTraversalMut};
+use traversal::{RefTraversal, TraversalMut, RefTraversalMut};
 
 mod keys;
 mod iter;
@@ -258,16 +258,13 @@ impl<'a, K: 'a, V: 'a> $traversal<'a, K, V> for $name where K: TrieKey {
 }} // end macro body.
 }
 
-#[allow(unused)]
 enum GetNode {}
-#[allow(unused)]
 enum GetNodeMut {}
 
 impl_get_traversal!(name: GetNode, traversal: RefTraversal, mutability: );
 impl_get_traversal!(name: GetNodeMut, traversal: RefTraversalMut, mutability: mut);
 
 /// Traversal type implementing removal.
-#[allow(unused)]
 enum Remove {}
 
 impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
@@ -311,7 +308,6 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
 }
 
 /// Traversal type implementing insertion.
-#[allow(unused)]
 enum Insert {}
 
 impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
@@ -378,7 +374,6 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
 }
 
 // Traversal type implementing get_ancestor.
-#[allow(unused)]
 enum GetAncestor {}
 
 impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetAncestor where K: TrieKey {
@@ -422,7 +417,6 @@ impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetRawAncestor where K: TrieKe
     }
 }
 
-#[allow(unused)]
 enum GetDescendant {}
 
 impl<'a, K: 'a, V: 'a> RefTraversal<'a, K, V> for GetDescendant where K: TrieKey {
