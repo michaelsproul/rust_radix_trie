@@ -3,13 +3,11 @@ Rust Radix Trie
 
 [![Build Status](https://travis-ci.org/michaelsproul/rust_radix_trie.svg)](https://travis-ci.org/michaelsproul/rust_radix_trie)
 
-This is a [Radix Trie][radix-wiki] implementation in Rust, building on the lessons learnt from
-`TrieMap` and [Sequence Trie][seq-trie].
+This is a [Radix Trie][radix-wiki] implementation in Rust, building on the lessons learnt from `TrieMap` and [Sequence Trie][seq-trie]. You can read about my experience implementing this data structure [here][radix-paper].
 
-You can read about my experience implementing this data structure [here][radix-paper].
+# Help Wanted, Enquire Within
 
-While I'm confident about the structure of the code, it hasn't been heavily tested and there
-may be some bugs. If you'd like to use this library please contribute some QuickCheck tests :)
+*Since writing this code I haven't used it in anger (or production) so it is no doubt in need of some maintenance, testing and optimisation love. If you would like to help out, try solving an open issue, optimise something (see [TODO](#To Do)), or just have a poke around!*
 
 # Features
 
@@ -29,19 +27,21 @@ radix_trie = "*"
 
 # Documentation
 
-https://michaelsproul.github.io/rust_radix_trie/
+https://docs.rs/radix_trie/
 
 # To Do
 
 * QuickCheck tests.
-* Child iterator (easy).
-* Optimise (make a `NibbleSlice`, see [paper][radix-paper]).
+* Child iterator (easy, done?).
+* Optimise:
+    + Make the traversals tail recursive so they can be TCO. Remove is the interesting case.
+    + Make a `NibbleSlice`? See [paper][radix-paper].
 * Implement the Entry API?
 
 # License
 
-MIT License. Copyright (c) Michael Sproul 2015.
+MIT License. Copyright © Michael Sproul and contributors 2016.
 
 [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
-[seq-trie]: https://github.com/michaelsproul/rust-sequence-trie
+[seq-trie]: https://github.com/michaelsproul/rust_sequence_trie
 [radix-paper]: https://michaelsproul.github.io/rust_radix_paper/
