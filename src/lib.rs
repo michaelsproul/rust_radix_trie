@@ -10,7 +10,7 @@ pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use iter::{Iter, Keys, Values};
 
-use keys::check_keys;
+use keys::{check_keys, match_keys, KeyMatch};
 use DeleteAction::*;
 use traversal::{RefTraversal, TraversalMut, RefTraversalMut};
 
@@ -60,6 +60,71 @@ pub struct Trie<K, V> {
     /// The children of this node stored such that the first nibble of each child key
     /// dictates the child's bucket.
     children: [Option<Box<Trie<K, V>>>; BRANCH_FACTOR],
+}
+
+pub fn loop_delete<K, V>(trie: &mut Trie<K, V>, key: &K) -> Option<V>
+    where K: TrieKey + std::fmt::Debug, V: std::fmt::Debug
+{
+    let nv = NibbleVec::from_byte_vec(key.encode());
+
+    if nv.len() == 0 {
+        return trie.take_value(key);
+    }
+
+    let mut curr: *mut Trie<K, V> = trie;
+    let mut bucket: usize = 0;
+    let mut result: Option<V> = None;
+    let mut action: DeleteAction<K, V> = DoNothing;
+
+    let mut i: usize = 0;
+
+    while i < nv.len() {
+        bucket = nv.get(i) as usize;
+
+        match unsafe { &mut *curr }.children[bucket] {
+            Some(ref mut child) => {
+                match match_keys(i, &nv, &child.key) {
+                    KeyMatch::Full => {
+                        result = child.take_value(key);
+                        action = child.delete_node();
+                        break;
+                    }
+
+                    KeyMatch::Partial(_) | KeyMatch::FirstPrefix => {
+                        // Game over
+                        return None;
+                    }
+
+                    KeyMatch::SecondPrefix => {
+                        curr = child.as_mut() as *mut Trie<K, V>;
+                        i += child.key.len();
+                    }
+                }
+            }
+            None => {
+                return None;
+            }
+        }
+    }
+
+    let curr: &mut Trie<K, V> = unsafe { &mut *curr };
+
+    if result.is_some() {
+        trie.length -= 1;
+    }
+
+    // At this point we have the "delete_node"
+    match action {
+        Delete => {
+            curr.children[bucket] = None;
+        }
+        Replace(repl) => {
+            curr.children[bucket] = Some(repl);
+        }
+        _ => {}
+    }
+
+    result
 }
 
 #[derive(Debug)]
@@ -205,7 +270,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 
     /// Remove and return the value associated with the given key.
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    pub fn remove_slow(&mut self, key: &K) -> Option<V> {
         let key_fragments = NibbleVec::from_byte_vec(key.encode());
 
         // Use the recursive removal function but ignore its delete action.
@@ -213,6 +278,10 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         let (result, action) = Remove::run(self, key, key_fragments);
         debug_assert!(action.is_delete() || action.is_do_nothing());
         result
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> where K: std::fmt::Debug, V: std::fmt::Debug {
+        loop_delete(self, key)
     }
 
     /// Return an iterator over the keys and values of the Trie.

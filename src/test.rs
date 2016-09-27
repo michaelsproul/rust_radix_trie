@@ -99,14 +99,26 @@ fn remove() {
 
     // Remove.
     for &(key, val) in &TEST_DATA {
-        assert_eq!(trie.remove(&key), Some(val));
-        assert!(trie.check_integrity());
+        let res = trie.remove(&key);
+        assert_eq!(res, Some(val));
+        //assert!(trie.check_integrity());
     }
 
     // Check non-existance.
     for &(key, _) in &TEST_DATA {
         assert!(trie.get(&key).is_none());
     }
+}
+
+#[test]
+fn remove_simple() {
+    let mut trie = Trie::new();
+
+    trie.insert("HELL", 66);
+    trie.insert("HELLO", 77);
+    let val = trie.remove(&"HELLO");
+    println!("{:#?}", trie);
+    assert_eq!(val, Some(77));
 }
 
 #[test]
