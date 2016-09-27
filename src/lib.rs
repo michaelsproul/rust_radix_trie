@@ -62,6 +62,45 @@ pub struct Trie<K, V> {
     children: [Option<Box<Trie<K, V>>>; BRANCH_FACTOR],
 }
 
+pub fn tc_remove(trie: &mut Trie<K, V>, key: &K) -> , Option<V>) {
+    let key_fragments = NibbleVec::from_bytes(key.encode());
+
+    if key_fragments.len() == 0 {
+        return trie.take_value(key);
+    }
+
+    
+}
+
+fn tc_remove(node: Option<Box<Trie<K, V>>, depth: usize, key_fragments: &NibbleVec)
+    -> (Option<Box<Trie<K, V>>>, Option<V>)
+{
+    let bucket = key_fragments.get(depth) as usize;
+
+    match node {
+        Some(node) => {
+            let child = node.children[bucket].take();
+            match child {
+                Some(child) => {
+                    match match_keys(depth, key_fragments, &child.key) {
+                        KeyMatch::Full => {
+                            // Do the actual deletion.
+                            
+                        }
+                        KeyMatch::Partial(i) | KeyMatch::FirstPrefix => {}
+                        KeyMatch::SecondPrefix => {
+                            node.children[bucket] = tc_remove(Some(child), depth + child.);
+                            let new_key = key_fragments.split(child.key.len());
+                            Self::run(child, input, new_key)
+                    }
+                }
+                None => (None, None)
+            }
+        }
+        None => (None, None)
+    }
+}
+
 #[derive(Debug)]
 struct KeyValue<K, V> {
     key: K,
