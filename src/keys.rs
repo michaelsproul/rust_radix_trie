@@ -27,16 +27,17 @@ pub enum KeyMatch {
 }
 
 /// Compare two Trie keys.
-pub fn match_keys(first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
-    let min_length = ::std::cmp::min(first.len(), second.len());
+pub fn match_keys(start_idx: usize, first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
+    let first_len = first.len() - start_idx;
+    let min_length = ::std::cmp::min(first_len, second.len());
 
     for i in 0..min_length {
-        if first.get(i) != second.get(i) {
+        if first.get(start_idx + i) != second.get(i) {
             return KeyMatch::Partial(i);
         }
     }
 
-    match (first.len(), second.len()) {
+    match (first_len, second.len()) {
         (x, y) if x < y => KeyMatch::FirstPrefix,
         (x, y) if x == y => KeyMatch::Full,
         _ => KeyMatch::SecondPrefix

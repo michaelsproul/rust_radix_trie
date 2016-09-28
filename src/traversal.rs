@@ -95,7 +95,7 @@ pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
             // so that the action_fn can be called consistently (insert is problematic ATM).
             None => return Self::no_child_fn(trie, input, key_fragments, bucket),
             Some(ref $($mut_)* child) => {
-                match match_keys(&key_fragments, &child.key) {
+                match match_keys(0, &key_fragments, &child.key) {
                     KeyMatch::Full =>
                         Self::child_match_fn(child, input, key_fragments),
                     KeyMatch::Partial(i) =>
