@@ -52,7 +52,7 @@ pub struct Trie<K, V> {
     key_value: Option<Box<KeyValue<K, V>>>,
 
     /// The number of values stored in this sub-trie (this node and all descendants).
-    length: usize,
+    // length: usize,
 
     /// The number of children which are Some rather than None.
     child_count: usize,
@@ -62,6 +62,7 @@ pub struct Trie<K, V> {
     children: [Option<Box<Trie<K, V>>>; BRANCH_FACTOR],
 }
 
+/*
 pub fn tc_remove(trie: &mut Trie<K, V>, key: &K) -> , Option<V>) {
     let key_fragments = NibbleVec::from_bytes(key.encode());
 
@@ -71,7 +72,90 @@ pub fn tc_remove(trie: &mut Trie<K, V>, key: &K) -> , Option<V>) {
 
     
 }
+*/
 
+fn lol_remove<K, V>(trie: &mut Trie<K, V>, key: &K) -> Option<V>
+    where K: TrieKey
+{
+    let nv = NibbleVec::from_byte_vec(key.encode());
+
+    if (nv.len() == 0) {
+        return trie.take_value(key);
+    }
+
+    let bucket = nv.get(0) as usize;
+
+    let child = trie.take_child(bucket);
+
+    match child {
+        Some(mut child) => {
+            let depth = child.key.len();
+            if depth == nv.len() {
+                child.take_value(key)
+            } else {
+                remove(trie, child, bucket, key, depth, &nv)
+            }
+        }
+        None => None
+    }
+}
+
+/// Remove the key described by `key`.
+fn remove<K, V>(parent: &mut Trie<K, V>, mut middle: Box<Trie<K, V>>, prev_bucket: usize, key: &K, depth: usize, nv: &NibbleVec)
+    -> Option<V> where K: TrieKey
+{
+    let bucket = nv.get(depth) as usize;
+
+    let child = middle.take_child(bucket);
+    parent.add_child(prev_bucket, middle);
+
+    match child {
+        Some(mut child) => {
+            let middle = parent.children[prev_bucket].as_mut().unwrap();
+            match match_keys(depth, nv, &child.key) {
+                KeyMatch::Full => {
+                    let result = child.take_value(key);
+
+                    // If this node has children, keep it.
+                    if child.child_count != 0 {
+                        // If removing this node's value has made it a value-less node with a
+                        // single child, then merge its child.
+                        let mut child_child = child.take_only_child();
+
+                        // Join the child's child's key onto the existing one (fucking lol).
+                        let new_key = child.key.clone().join(&child_child.key);
+
+                        child_child.key = new_key;
+
+                        middle.add_child(bucket, child_child);
+                    }
+                    // Otherwise, if the parent node now only has a single child, merge it.
+                    else if middle.child_count == 1 && middle.key_value.is_none() {
+                        let mut other_child = middle.take_only_child();
+
+                        // Join the child's key onto the existing one.
+                        let new_key = middle.key.clone().join(&other_child.key);
+
+                        other_child.key = new_key;
+                        *middle = other_child;
+                    }
+
+                    result
+                }
+                KeyMatch::SecondPrefix => {
+                    let new_depth = depth + child.key.len();
+                    remove(middle, child, bucket, key, new_depth, nv)
+                }
+                _ => None
+            }
+        }
+        None => {
+            None
+        }
+    }
+}
+
+/*
 fn tc_remove(node: Option<Box<Trie<K, V>>, depth: usize, key_fragments: &NibbleVec)
     -> (Option<Box<Trie<K, V>>>, Option<V>)
 {
@@ -99,6 +183,7 @@ fn tc_remove(node: Option<Box<Trie<K, V>>, depth: usize, key_fragments: &NibbleV
         }
         None => (None, None)
     }
+*/
 
 pub fn loop_delete<K, V>(trie: &mut Trie<K, V>, key: &K) -> Option<V>
     where K: TrieKey + std::fmt::Debug, V: std::fmt::Debug
@@ -148,7 +233,7 @@ pub fn loop_delete<K, V>(trie: &mut Trie<K, V>, key: &K) -> Option<V>
     let curr: &mut Trie<K, V> = unsafe { &mut *curr };
 
     if result.is_some() {
-        trie.length -= 1;
+        // trie.length -= 1;
     }
 
     // At this point we have the "delete_node"
@@ -203,18 +288,18 @@ impl<K, V> Trie<K, V> where K: TrieKey {
             key_value: None,
             children: no_children![],
             child_count: 0,
-            length: 0
+            // length: 0
         }
     }
 
     /// Fetch the number of key-value pairs stored in the Trie.
     pub fn len(&self) -> usize {
-        self.length
+        0
     }
 
     /// Determine if the Trie contains 0 key-value pairs.
     pub fn is_empty(&self) -> bool {
-        self.length == 0
+        self.len() == 0
     }
 
     /// Determine if the trie is a leaf node (has no children).
@@ -319,7 +404,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 
     pub fn remove(&mut self, key: &K) -> Option<V> where K: std::fmt::Debug, V: std::fmt::Debug {
-        loop_delete(self, key)
+        lol_remove(self, key)
     }
 
     /// Return an iterator over the keys and values of the Trie.
@@ -393,10 +478,12 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Remove where K: TrieKey {
         bucket: usize
     )
     -> Self::Output {
+        /*
         // If a value has been removed, reduce the length of this trie.
         if value.is_some() {
             trie.length -= 1;
         }
+        */
 
         // Apply the computed delete action.
         match action {
@@ -473,9 +560,11 @@ impl<'a, K: 'a, V: 'a> TraversalMut<'a, K, V> for Insert where K: TrieKey {
 
     fn action_fn(trie: &mut Trie<K, V>, previous_value: Option<V>, _: usize) -> Self::Output {
         // If there's no previous value, increase the length of the trie.
+        /*
         if previous_value.is_none() {
             trie.length += 1;
         }
+        */
         previous_value
     }
 }
@@ -546,7 +635,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
             key_value: Some(Box::new(KeyValue { key: key, value: value })),
             children: no_children![],
             child_count: 0,
-            length: 1
+            //length: 1
         }
     }
 
@@ -575,7 +664,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     fn add_child(&mut self, idx: usize, node: Box<Trie<K, V>>) {
         debug_assert!(self.children[idx].is_none());
         self.child_count += 1;
-        self.length += node.length;
+        // self.length += node.length;
         self.children[idx] = Some(node);
     }
 
@@ -583,7 +672,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     fn take_child(&mut self, idx: usize) -> Option<Box<Trie<K, V>>> {
         self.children[idx].take().map(|node| {
             self.child_count -= 1;
-            self.length -= node.length;
+            // self.length -= node.length;
             node
         })
     }
@@ -603,7 +692,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     fn add_key_value(&mut self, key: K, value: V) {
         debug_assert!(self.key_value.is_none());
         self.key_value = Some(Box::new(KeyValue { key: key, value: value }));
-        self.length += 1;
+        // self.length += 1;
     }
 
     /// Move the value out of a node, whilst checking that its key is as expected.
@@ -611,7 +700,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     fn take_value(&mut self, key: &K) -> Option<V> {
         self.key_value.take().map(|kv| {
             check_keys(&kv.key, key);
-            self.length -= 1;
+            // self.length -= 1;
             kv.value
         })
     }
@@ -681,7 +770,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
                 key_value: key_value,
                 children: children,
                 child_count: child_count,
-                length: self.length
+                // length: self.length
             }
         ));
     }
@@ -741,10 +830,12 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         }
 
         // Check subtree size.
+        /*
         if self.length != sub_tree_size {
             println!("Subtree size mismatch, recorded: {}, actual: {}", self.length, sub_tree_size);
             return (false, sub_tree_size);
         }
+        */
 
         (true, sub_tree_size)
     }

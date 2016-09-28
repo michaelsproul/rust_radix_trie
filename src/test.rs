@@ -99,9 +99,11 @@ fn remove() {
 
     // Remove.
     for &(key, val) in &TEST_DATA {
+        println!("Removing: {}", key);
         let res = trie.remove(&key);
         assert_eq!(res, Some(val));
-        //assert!(trie.check_integrity());
+        println!("{:#?}", trie);
+        assert!(trie.check_integrity());
     }
 
     // Check non-existance.
