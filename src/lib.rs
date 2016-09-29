@@ -79,7 +79,7 @@ fn lol_remove<K, V>(trie: &mut Trie<K, V>, key: &K) -> Option<V>
 {
     let nv = NibbleVec::from_byte_vec(key.encode());
 
-    if (nv.len() == 0) {
+    if nv.len() == 0 {
         return trie.take_value(key);
     }
 
@@ -91,13 +91,33 @@ fn lol_remove<K, V>(trie: &mut Trie<K, V>, key: &K) -> Option<V>
         Some(mut child) => {
             let depth = child.key.len();
             if depth == nv.len() {
-                child.take_value(key)
+                let result = child.take_value(key);
+                if child.child_count != 0 {
+                    // If removing this node's value has made it a value-less node with a
+                    // single child, then merge its child.
+                    let repl = if child.child_count == 1 {
+                        get_merge_child(&mut child)
+                    } else {
+                        child
+                    };
+                    trie.add_child(bucket, repl);
+                }
+                result
             } else {
                 remove(trie, child, bucket, key, depth, &nv)
             }
         }
         None => None
     }
+}
+
+fn get_merge_child<K, V>(trie: &mut Trie<K, V>) -> Box<Trie<K, V>> where K: TrieKey {
+    let mut child = trie.take_only_child();
+
+    // Join the child's key onto the existing one.
+    child.key = trie.key.clone().join(&child.key);
+
+    child
 }
 
 /// Remove the key described by `key`.
@@ -120,24 +140,17 @@ fn remove<K, V>(parent: &mut Trie<K, V>, mut middle: Box<Trie<K, V>>, prev_bucke
                     if child.child_count != 0 {
                         // If removing this node's value has made it a value-less node with a
                         // single child, then merge its child.
-                        let mut child_child = child.take_only_child();
-
-                        // Join the child's child's key onto the existing one (fucking lol).
-                        let new_key = child.key.clone().join(&child_child.key);
-
-                        child_child.key = new_key;
-
-                        middle.add_child(bucket, child_child);
+                        let repl = if child.child_count == 1 {
+                            get_merge_child(&mut *child)
+                        } else {
+                            child
+                        };
+                        middle.add_child(bucket, repl);
                     }
                     // Otherwise, if the parent node now only has a single child, merge it.
                     else if middle.child_count == 1 && middle.key_value.is_none() {
-                        let mut other_child = middle.take_only_child();
-
-                        // Join the child's key onto the existing one.
-                        let new_key = middle.key.clone().join(&other_child.key);
-
-                        other_child.key = new_key;
-                        *middle = other_child;
+                        let repl = get_merge_child(middle);
+                        *middle = repl;
                     }
 
                     result
