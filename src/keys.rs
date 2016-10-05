@@ -10,7 +10,14 @@ use NibbleVec;
 /// encountering a conflict. Be careful!
 pub trait TrieKey: PartialEq + Eq {
     /// Encode a value as a vector of bytes.
-    fn encode(&self) -> Vec<u8>;
+    fn encode_bytes(&self) -> Vec<u8> {
+        panic!("implement this method or TrieKey::encode");
+    }
+
+    /// Encode a value as a NibbleVec.
+    fn encode(&self) -> NibbleVec {
+        NibbleVec::from_byte_vec(self.encode_bytes())
+    }
 }
 
 /// Key comparison result.
@@ -52,9 +59,8 @@ pub fn check_keys<K>(key1: &K, key2: &K) where K: TrieKey {
 }
 
 /// --- TrieKey Implementations for standard types --- ///
-
 impl<T> TrieKey for T where T: Into<Vec<u8>> + Clone + Eq + PartialEq {
-    fn encode(&self) -> Vec<u8> {
+    fn encode_bytes(&self) -> Vec<u8> {
         self.clone().into()
     }
 }

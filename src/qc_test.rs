@@ -76,8 +76,8 @@ fn insert_all_remove_all() {
             if trie.insert(k.clone(), k.len()).is_some() {
                 return false;
             }
-            //length += 1;
-            //if trie.len() != length { return false }
+            length += 1;
+            if trie.len() != length { return false }
         }
 
         if !trie.check_integrity() { return false }
@@ -89,8 +89,8 @@ fn insert_all_remove_all() {
             if trie.remove(&k) != Some(k.len()) {
                 return false;
             }
-            //length -= 1;
-            //if trie.len() != length { return false }
+            length -= 1;
+            if trie.len() != length { return false }
             if trie.get(&k).is_some() { return false }
         }
         if !trie.check_integrity() { return false }
@@ -110,7 +110,7 @@ fn get_node() {
         // Check node existence for inserted keys.
         for k in keys.iter().take(half) {
             match trie.get_node(&k) {
-                Some(node) => if node.value() != Some(&k.len()) { return false },
+                Some(node) => if node.key_value.as_ref().map(|kv| &kv.value) != Some(&k.len()) { return false },
                 None => return false
             }
         }
@@ -118,7 +118,7 @@ fn get_node() {
         // Check that nodes for non-inserted keys don't have values.
         for k in keys.iter().skip(half) {
             if let Some(node) = trie.get_node(&k) {
-                if node.value().is_some() { return false }
+                if node.key_value.is_some() { return false }
             }
         }
 
