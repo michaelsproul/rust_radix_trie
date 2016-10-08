@@ -249,7 +249,7 @@ fn subtrie_lifetime() {
         let subtrie = trie.subtrie(&"ab").unwrap();
         subtrie.value()
     };
-    assert_eq!(*subtrie.value.unwrap(), 16);
+    assert_eq!(*subtrie_value.unwrap(), 16);
 }
 
 #[test]
