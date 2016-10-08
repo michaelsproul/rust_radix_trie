@@ -1,123 +1,250 @@
-//! Customisable, user-implementable traversals for tries.
-//!
-//! This module contains 4 traits that allow you to write your own recursive trie traversals. Each
-//! trait handles the key-splitting logic and result handling required to write a traversal. All of
-//! the library's important operations are implemented as traversals (insert, remove, get_ancestor,
-//! etc).
-//!
-//! The trait is basically a massively higher-order function. The `Input` type allows you
-//! to define values to be passed down the traversal as it proceeds, while the `Output` type
-//! allows you to propogate a value back up the call stack. Look at the source for `run`.
-//!
-//! # Which Trait?
-//!
-//! * `Traversal` - immutable trie, references not allowed in `Output` type.
-//! * `RefTraversal` - immutable trie, references allowed in `Output` type.
-//! * `TraversalMut` - mutable trie, references not allowed in `Output` type.
-//! * `RefTraversalMut` - mutable trie, references allowed in `Output` type, no `action_fn`.
+//! This module contains the core algorithms.
 
-use {Trie, TrieKey, NibbleVec};
+use {TrieNode, TrieKey, NibbleVec};
 use keys::{match_keys, KeyMatch};
 
-/// Identity macro to allow expansion of the "mutability" token tree.
-#[macro_export]
-macro_rules! id {
-    ($e:item) => { $e }
+impl<K, V> TrieNode<K, V> where K: TrieKey {
+    pub fn get(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
+        iterative_get(self, nv)
+    }
+
+    pub fn get_mut(&mut self, nv: &NibbleVec) -> Option<&mut TrieNode<K, V>> {
+        iterative_get_mut(self, nv)
+    }
+
+    pub fn insert(&mut self, key: K, value: V, nv: NibbleVec) -> Option<V> {
+        iterative_insert(self, key, value, nv)
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        recursive_remove(self, key)
+    }
+
+    pub fn get_ancestor(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
+        get_ancestor(self, nv)
+    }
 }
 
-macro_rules! if_else {
-    (false, $x:expr, $y:expr) => { $y };
-    (true, $x:expr, $y:expr) => { $x };
-}
-
-// NOTE: Use () default input type once `associated_type_defaults` stabilises.
-macro_rules! make_traversal_trait {
+macro_rules! get_func {
     (
         name: $name:ident,
         trie_type: $trie_type:ty,
-        with_action: $with_action:tt,
         mutability: $($mut_:tt)*
-    ) => { id! {
-pub trait $name<'a, K: 'a, V: 'a> where K: TrieKey {
-    type Input: 'a;
-    type Output;
+    ) => {id!{
+        fn $name<'a, K, V>(trie: $trie_type, nv: &NibbleVec) -> Option<$trie_type> {
+            if nv.len() == 0 {
+                return Some(trie);
+            }
 
-    fn default_result() -> Self::Output;
+            let mut prev = trie;
+            let mut depth = 0;
 
-    #[allow(unused)]
-    fn match_fn(trie: $trie_type, input: Self::Input) -> Self::Output {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn no_child_fn
-    (
-        trie: $trie_type, input: Self::Input,
-        nv: NibbleVec, bucket: usize
-    ) -> Self::Output {
-        Self::default_result()
-    }
-
-    #[doc = "Defaults to `match_fn`."]
-    #[allow(unused)]
-    fn child_match_fn(child: $trie_type, input: Self::Input, nv: NibbleVec) -> Self::Output {
-        Self::match_fn(child, input)
-    }
-
-    #[allow(unused)]
-    fn partial_match_fn(child: $trie_type, input: Self::Input, nv: NibbleVec, idx: usize)
-    -> Self::Output {
-        Self::default_result()
-    }
-
-    #[allow(unused)]
-    fn first_prefix_fn(trie: $trie_type, input: Self::Input, nv: NibbleVec) -> Self::Output {
-        Self::default_result()
-    }
-
-    // NOTE: Don't generate action_fn at all (cf. Rust issue #4621).
-    #[doc = "Note: this function isn't called in a `RefTraversalMut`."]
-    #[allow(unused)]
-    fn action_fn(trie: $trie_type, intermediate: Self::Output, bucket: usize) -> Self::Output {
-        intermediate
-    }
-
-    #[doc = "Run the traversal, returning the result."]
-    fn run(trie: $trie_type, input: Self::Input, mut key_fragments: NibbleVec) -> Self::Output {
-        if key_fragments.len() == 0 {
-            return Self::match_fn(trie, input);
-        }
-
-        let bucket = key_fragments.get(0) as usize;
-
-        let intermediate = match trie.children[bucket] {
-            // FIXME: It would probably be wise to not return early here,
-            // so that the action_fn can be called consistently (insert is problematic ATM).
-            None => return Self::no_child_fn(trie, input, key_fragments, bucket),
-            Some(ref $($mut_)* child) => {
-                match match_keys(&key_fragments, &child.key) {
-                    KeyMatch::Full =>
-                        Self::child_match_fn(child, input, key_fragments),
-                    KeyMatch::Partial(i) =>
-                        Self::partial_match_fn(child, input, key_fragments, i),
-                    KeyMatch::FirstPrefix =>
-                        Self::first_prefix_fn(child, input, key_fragments),
-                    KeyMatch::SecondPrefix => {
-                        let new_key = key_fragments.split(child.key.len());
-                        Self::run(child, input, new_key)
+            loop {
+                let bucket = nv.get(depth) as usize;
+                let current = prev;
+                if let Some(ref $($mut_)* child) = current.children[bucket] {
+                    match match_keys(depth, nv, &child.key) {
+                        KeyMatch::Full => {
+                            return Some(child);
+                        }
+                        KeyMatch::SecondPrefix => {
+                            depth += child.key.len();
+                            prev = child;
+                        }
+                        _ => {
+                            return None;
+                        }
                     }
+                } else {
+                    return None;
                 }
             }
-        };
-
-        if_else!($with_action, Self::action_fn(trie, intermediate, bucket), intermediate)
-    }
-} // end trait.
-}} // end macro body.
+        }
+    }}
 }
 
-make_traversal_trait!(name: Traversal, trie_type: &Trie<K, V>, with_action: true, mutability: );
-make_traversal_trait!(name: RefTraversal, trie_type: &'a Trie<K, V>, with_action: true, mutability: );
+get_func!(name: iterative_get, trie_type: &'a TrieNode<K, V>, mutability: );
+get_func!(name: iterative_get_mut, trie_type: &'a mut TrieNode<K, V>, mutability: mut);
 
-make_traversal_trait!(name: TraversalMut, trie_type: &mut Trie<K, V>, with_action: true, mutability: mut);
-make_traversal_trait!(name: RefTraversalMut, trie_type: &'a mut Trie<K, V>, with_action: false, mutability: mut);
+fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>, key: K, value: V, mut nv: NibbleVec)
+    -> Option<V> where K: TrieKey
+{
+    if nv.len() == 0 {
+        return trie.replace_value(key, value);
+    }
+
+    let mut prev = trie;
+    let mut depth = 0;
+
+    loop {
+        let bucket = nv.get(depth) as usize;
+        let current = prev;
+        if let Some(ref mut child) = current.children[bucket] {
+            match match_keys(depth, &nv, &child.key) {
+                KeyMatch::Full => {
+                    return child.replace_value(key, value);
+                }
+                KeyMatch::Partial(idx) => {
+                    // Split the existing child.
+                    child.split(idx);
+
+                    // Insert the new key below the prefix node.
+                    let new_key = nv.split(depth + idx);
+                    let new_key_bucket = new_key.get(0) as usize;
+
+                    child.add_child(
+                        new_key_bucket,
+                        Box::new(TrieNode::with_key_value(new_key, key, value))
+                    );
+
+                    return None;
+                }
+                KeyMatch::FirstPrefix => {
+                    child.split(nv.len() - depth);
+                    child.add_key_value(key, value);
+                    return None;
+                }
+                KeyMatch::SecondPrefix => {
+                    depth += child.key.len();
+                    prev = child;
+                }
+            }
+        } else {
+            let node_key = nv.split(depth);
+            current.add_child(bucket, Box::new(TrieNode::with_key_value(node_key, key, value)));
+            return None;
+        }
+    }
+}
+
+// TODO: clean this up and make it iterative.
+fn recursive_remove<K, V>(trie: &mut TrieNode<K, V>, key: &K) -> Option<V>
+    where K: TrieKey
+{
+    let nv = key.encode();
+
+    if nv.len() == 0 {
+        return trie.take_value(key);
+    }
+
+    let bucket = nv.get(0) as usize;
+
+    let child = trie.take_child(bucket);
+
+    match child {
+        Some(mut child) => {
+            let depth = child.key.len();
+            if depth == nv.len() {
+                let result = child.take_value(key);
+                if child.child_count != 0 {
+                    // If removing this node's value has made it a value-less node with a
+                    // single child, then merge its child.
+                    let repl = if child.child_count == 1 {
+                        get_merge_child(&mut child)
+                    } else {
+                        child
+                    };
+                    trie.add_child(bucket, repl);
+                }
+                result
+            } else {
+                rec_remove(trie, child, bucket, key, depth, &nv)
+            }
+        }
+        None => None
+    }
+}
+
+fn get_merge_child<K, V>(trie: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>> where K: TrieKey {
+    let mut child = trie.take_only_child();
+
+    // Join the child's key onto the existing one.
+    child.key = trie.key.clone().join(&child.key);
+
+    child
+}
+
+// Tail-recursive remove function used by `recursive_remove`.
+fn rec_remove<K, V>(parent: &mut TrieNode<K, V>, mut middle: Box<TrieNode<K, V>>, prev_bucket: usize, key: &K, depth: usize, nv: &NibbleVec)
+    -> Option<V> where K: TrieKey
+{
+    let bucket = nv.get(depth) as usize;
+
+    let child = middle.take_child(bucket);
+    parent.add_child(prev_bucket, middle);
+
+    match child {
+        Some(mut child) => {
+            let middle = parent.children[prev_bucket].as_mut().unwrap();
+            match match_keys(depth, nv, &child.key) {
+                KeyMatch::Full => {
+                    let result = child.take_value(key);
+
+                    // If this node has children, keep it.
+                    if child.child_count != 0 {
+                        // If removing this node's value has made it a value-less node with a
+                        // single child, then merge its child.
+                        let repl = if child.child_count == 1 {
+                            get_merge_child(&mut *child)
+                        } else {
+                            child
+                        };
+                        middle.add_child(bucket, repl);
+                    }
+                    // Otherwise, if the parent node now only has a single child, merge it.
+                    else if middle.child_count == 1 && middle.key_value.is_none() {
+                        let repl = get_merge_child(middle);
+                        *middle = repl;
+                    }
+
+                    result
+                }
+                KeyMatch::SecondPrefix => {
+                    let new_depth = depth + child.key.len();
+                    rec_remove(middle, child, bucket, key, new_depth, nv)
+                }
+                _ => None
+            }
+        }
+        None => {
+            None
+        }
+    }
+}
+
+// TODO: Mutable ancestor will be hard.
+fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'a TrieNode<K, V>>
+    where K: TrieKey
+{
+    if nv.len() == 0 {
+        return trie.as_value_node();
+    }
+
+    let mut prev = trie;
+    // The ancestor is such that all nodes upto and including `prev` have
+    // already been considered.
+    let mut ancestor = prev.as_value_node();
+    let mut depth = 0;
+
+    loop {
+        let bucket = nv.get(depth) as usize;
+        let current = prev;
+        if let Some(ref child) = current.children[bucket] {
+            match match_keys(depth, &nv, &child.key) {
+                KeyMatch::Full => {
+                    return child.as_value_node().or(ancestor);
+                }
+                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                    return ancestor;
+                }
+                KeyMatch::SecondPrefix => {
+                    depth += child.key.len();
+                    ancestor = child.as_value_node().or(ancestor);
+                    prev = child;
+                }
+            }
+        } else {
+            return ancestor;
+        }
+    }
+}

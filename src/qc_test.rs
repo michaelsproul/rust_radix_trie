@@ -4,7 +4,6 @@ use {Trie, TrieKey};
 use std::iter::FromIterator;
 use std::collections::{HashSet, HashMap};
 use quickcheck::{quickcheck, Gen, Arbitrary};
-use rand::Rng;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Key(Vec<u8>);
@@ -38,7 +37,7 @@ impl Key {
 }
 
 impl TrieKey for Key {
-    fn encode(&self) -> Vec<u8> {
+    fn encode_bytes(&self) -> Vec<u8> {
         self.0.clone()
     }
 }
@@ -101,7 +100,7 @@ fn insert_all_remove_all() {
 }
 
 #[test]
-fn get_node() {
+fn subtrie() {
     fn prop(RandomKeys(keys): RandomKeys) -> bool {
         let half = keys.len() / 2;
         let first_half = keys.iter().take(half).map(|k| (k.clone(), k.len()));
@@ -109,7 +108,7 @@ fn get_node() {
 
         // Check node existence for inserted keys.
         for k in keys.iter().take(half) {
-            match trie.get_node(&k) {
+            match trie.subtrie(&k) {
                 Some(node) => if node.value() != Some(&k.len()) { return false },
                 None => return false
             }
@@ -117,7 +116,7 @@ fn get_node() {
 
         // Check that nodes for non-inserted keys don't have values.
         for k in keys.iter().skip(half) {
-            if let Some(node) = trie.get_node(&k) {
+            if let Some(node) = trie.subtrie(&k) {
                 if node.value().is_some() { return false }
             }
         }

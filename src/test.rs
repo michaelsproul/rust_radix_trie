@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use Trie;
+use {Trie};
 
 const TEST_DATA: [(&'static str, u32); 7] = [
         ("abcdefgh", 19),
@@ -30,29 +30,29 @@ fn get_nonexistant() {
 }
 
 #[test]
-fn get_node_nonexistant() {
+fn subtrie_nonexistant() {
     let trie = test_trie();
-    assert!(trie.get_node(&"nonexistant").is_none());
-    assert!(trie.get_node(&"").is_some());
+    assert!(trie.subtrie(&"nonexistant").is_none());
+    assert!(trie.subtrie(&"").is_some());
 }
 
 #[test]
-fn get_node() {
+fn subtrie() {
     let mut trie = Trie::new();
     trie.insert("hello", 55);
-    assert!(trie.get_node(&"h").is_none());
-    assert!(trie.get_node(&"hello").is_some());
+    assert!(trie.subtrie(&"h").is_none());
+    assert!(trie.subtrie(&"hello").is_some());
 }
 #[test]
-fn get_node_string() {
+fn subtrie_string() {
     let mut trie = Trie::new();
     trie.insert("hello".to_string(), 55);
 
     let h = "h".to_string();
     let hello = "hello".to_string();
 
-    assert!(trie.get_node(&h).is_none());
-    assert!(trie.get_node(&hello).is_some());
+    assert!(trie.subtrie(&h).is_none());
+    assert!(trie.subtrie(&hello).is_some());
 }
 
 #[test]
@@ -99,7 +99,8 @@ fn remove() {
 
     // Remove.
     for &(key, val) in &TEST_DATA {
-        assert_eq!(trie.remove(&key), Some(val));
+        let res = trie.remove(&key);
+        assert_eq!(res, Some(val));
         assert!(trie.check_integrity());
     }
 
@@ -107,6 +108,16 @@ fn remove() {
     for &(key, _) in &TEST_DATA {
         assert!(trie.get(&key).is_none());
     }
+}
+
+#[test]
+fn remove_simple() {
+    let mut trie = Trie::new();
+
+    trie.insert("HELL", 66);
+    trie.insert("HELLO", 77);
+    let val = trie.remove(&"HELLO");
+    assert_eq!(val, Some(77));
 }
 
 #[test]
@@ -135,10 +146,11 @@ fn nearest_ancestor() {
 fn nearest_ancestor_no_child_fn() {
     let mut t = Trie::new();
     t.insert("ab", 5);
-    let anc = t.get_ancestor(&"abc");
-    assert_eq!(*anc.and_then(Trie::value).unwrap(), 5);
+    let anc = t.get_ancestor(&"abc").unwrap();
+    assert_eq!(*anc.value().unwrap(), 5);
 }
 
+/*
 #[test]
 fn raw_ancestor() {
     let mut t = Trie::new();
@@ -155,6 +167,7 @@ fn raw_ancestor() {
     let anc = t.get_raw_ancestor(&"hello");
     assert_eq!(anc.len(), 2);
 }
+*/
 
 #[test]
 fn iter() {
@@ -165,6 +178,7 @@ fn iter() {
     assert_eq!(expected, observed);
 }
 
+/*
 #[test]
 fn get_descendant() {
     let trie = test_trie();
@@ -172,6 +186,7 @@ fn get_descendant() {
     assert_eq!(trie.get_descendant(&"abcdefg").and_then(|t| t.value()), Some(&19));
     assert!(trie.get_descendant(&"acbg").is_none());
 }
+*/
 
 #[test]
 fn get_prefix_bug() {
@@ -197,5 +212,29 @@ fn root_replace_bug() {
     trie.remove(&"a");
     assert_eq!(trie.len(), 1);
     trie.remove(&"p");
-    assert_eq!(trie.len(), 0);    
+    assert_eq!(trie.len(), 0);
+}
+
+#[test]
+fn subtrie_insert() {
+    let mut trie = Trie::new();
+    trie.insert("abc", 3);
+    {
+        let mut subtrie = trie.subtrie_mut(&"abc").unwrap();
+        assert_eq!(subtrie.insert("somerandomshit", 666), Err(()));
+        assert_eq!(subtrie.insert("abcdef", 6), Ok(None));
+        assert_eq!(subtrie.insert("abc", 9), Ok(Some(3)));
+    }
+    assert_eq!(trie.get(&"abc"), Some(&9));
+    assert_eq!(trie.get(&"abcdef"), Some(&6));
+    assert_eq!(trie.len(), 2);
+}
+
+#[test]
+fn subtrie_len() {
+    let trie = test_trie();
+    assert_eq!(trie.subtrie(&"ab").unwrap().len(), 4);
+    assert_eq!(trie.subtrie(&"a").unwrap().len(), 6);
+    assert_eq!(trie.subtrie(&"").unwrap().len(), trie.len());
+    assert_eq!(trie.subtrie(&"bcdefgh").unwrap().len(), 1);
 }

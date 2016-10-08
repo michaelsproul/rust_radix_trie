@@ -9,13 +9,16 @@ fn main() {
     t.insert("abb", 6);
     t.insert("abc", 50);
 
+    // FIXME
     // This is a bit of a hack that relies on knowing the binary representation of
     // strings... "abd" works, but "abz" doesn't...
+    /*
     let ab_sum = t.get_raw_ancestor(&"abd").child_iter().fold(0, |acc, c| {
         println!("Iterating over child with value: {:?}", c.value());
         acc + *c.value().unwrap_or(&0)
     });
-
+    */
+    let ab_sum = 0;
     println!("{}", ab_sum);
     assert_eq!(ab_sum, 5 + 6 + 50);
 }

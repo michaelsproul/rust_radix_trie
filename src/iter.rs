@@ -1,13 +1,13 @@
 use std::slice;
 use std::iter::{Map, FilterMap, FromIterator};
 
-use {Trie, TrieKey};
+use {Trie, TrieNode, TrieKey};
 
 // MY EYES.
-pub type Child<K, V> = Box<Trie<K, V>>;
-pub type RawChildIter<'a, K, V> = slice::Iter<'a, Option<Child<K, V>>>;
-pub type ChildMapFn<'a, K, V> = fn(&'a Option<Child<K, V>>) -> Option<&'a Child<K, V>>;
-pub type ChildIter<'a, K, V> = FilterMap<RawChildIter<'a, K, V>, ChildMapFn<'a, K, V>>;
+type Child<K, V> = Box<TrieNode<K, V>>;
+type RawChildIter<'a, K, V> = slice::Iter<'a, Option<Child<K, V>>>;
+type ChildMapFn<'a, K, V> = fn(&'a Option<Child<K, V>>) -> Option<&'a Child<K, V>>;
+type ChildIter<'a, K, V> = FilterMap<RawChildIter<'a, K, V>, ChildMapFn<'a, K, V>>;
 
 /// Iterator over the keys and values of a Trie.
 pub struct Iter<'a, K: 'a, V: 'a> {
@@ -70,7 +70,7 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
     }
 }
 
-impl<K, V> Trie<K, V> {
+impl<K, V> TrieNode<K, V> {
     /// Helper function to get all the non-empty children of a node.
     pub fn child_iter<'a>(&'a self) -> ChildIter<'a, K, V> {
         fn id<'b, K, V>(x: &'b Option<Child<K, V>>) -> Option<&'b Child<K, V>> {
@@ -87,7 +87,7 @@ impl<K, V> Trie<K, V> {
 }
 
 enum IterAction<'a, K: 'a, V: 'a> {
-    Push(&'a Trie<K, V>),
+    Push(&'a TrieNode<K, V>),
     Pop
 }
 
@@ -100,8 +100,8 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
         // Visit each node as it is reached from its parent (with special root handling).
         if !self.root_visited {
             self.root_visited = true;
-            self.stack.push(self.root.child_iter());
-            if let Some(kv) = self.root.kv_as_pair() {
+            self.stack.push(self.root.node.child_iter());
+            if let Some(kv) = self.root.node.kv_as_pair() {
                 return Some(kv);
             }
         }

@@ -1,0 +1,4 @@
+* Iterators for subtries (add to macro).
+* Tests for subtrie properties, length, etc.
+* get_descendant
+* get_raw_ancestor
