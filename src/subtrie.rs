@@ -14,6 +14,11 @@ impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
         subtrie_size(&self.node)
     }
 
+    /// Gets the primary node (for use with child_iter, etc.)
+    pub fn node(&self) -> &TrieNode<K, V> {
+        &self.node
+    }
+
     generate_trie_node_methods!();
 }
 

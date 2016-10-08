@@ -44,7 +44,7 @@ pub struct Trie<K, V> {
 }
 
 #[derive(Debug)]
-struct TrieNode<K, V> {
+pub struct TrieNode<K, V> {
     /// Key fragments/bits associated with this node, such that joining the keys from all
     /// parent nodes and this node is equal to the bit-encoding of this node's key.
     key: NibbleVec,
