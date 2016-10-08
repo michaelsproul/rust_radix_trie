@@ -10,16 +10,9 @@ impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
     /// Compute the size of this subtrie.
     ///
     /// This isn't a constant time operation and involves a full traversal of the subtrie.
-    pub fn len(&self) -> usize {
+    pub fn _len(&self) -> usize {
         subtrie_size(&self.node)
     }
-
-    /// Gets the primary node (for use with child_iter, etc.)
-    pub fn node(&self) -> &TrieNode<K, V> {
-        &self.node
-    }
-
-    generate_trie_node_methods!();
 }
 
 fn subtrie_get<'a, K, V>(prefix: &NibbleVec, node: &'a TrieNode<K, V>, key: &K)
@@ -36,6 +29,7 @@ fn subtrie_get<'a, K, V>(prefix: &NibbleVec, node: &'a TrieNode<K, V>, key: &K)
     }
 }
 
+// TODO: put this on TrieNode.
 fn subtrie_size<'a, K, V>(node: &'a TrieNode<K, V>) -> usize {
     let mut size = if node.key_value.is_some() { 1 } else { 0 };
 
@@ -57,8 +51,13 @@ impl <'a, K, V> SubTrieMut<'a, K, V> where K: TrieKey {
     /// Compute the size of this subtrie.
     ///
     /// This isn't a constant time operation and involves a full traversal of the subtrie.
-    pub fn len(&self) -> usize {
+    pub fn _len(&self) -> usize {
         subtrie_size(&self.node)
+    }
+
+    /// Mutable reference to the node's value.
+    pub fn value_mut(&mut self) -> Option<&mut V> {
+        self.node.value_mut()
     }
 
     /// Insert a value in this subtrie. The key should be an extension of this subtrie's key.
@@ -79,7 +78,7 @@ impl <'a, K, V> SubTrieMut<'a, K, V> where K: TrieKey {
         }
     }
 
-    generate_trie_node_methods!();
+    // TODO: remove!
 }
 
 fn stripped(mut key: NibbleVec, prefix: &NibbleVec) -> NibbleVec {

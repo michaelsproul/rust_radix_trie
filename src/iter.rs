@@ -1,7 +1,7 @@
 use std::slice;
 use std::iter::{Map, FilterMap, FromIterator};
 
-use {Trie, TrieNode, TrieKey};
+use {Trie, TrieNode, TrieKey, SubTrie, NibbleVec};
 
 // MY EYES.
 type Child<K, V> = Box<TrieNode<K, V>>;
@@ -11,13 +11,13 @@ type ChildIter<'a, K, V> = FilterMap<RawChildIter<'a, K, V>, ChildMapFn<'a, K, V
 
 /// Iterator over the keys and values of a Trie.
 pub struct Iter<'a, K: 'a, V: 'a> {
-    root: &'a Trie<K, V>,
+    root: &'a TrieNode<K, V>,
     root_visited: bool,
     stack: Vec<ChildIter<'a, K, V>>
 }
 
 impl<'a, K, V> Iter<'a, K, V> {
-    pub fn new(root: &Trie<K, V>) -> Iter<K, V> {
+    pub fn new(root: &'a TrieNode<K, V>) -> Iter<'a, K, V> {
         Iter {
             root: root,
             root_visited: false,
@@ -70,9 +70,38 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
     }
 }
 
+/// Iterator over the child subtries of a trie.
+pub struct Children<'a, K: 'a, V: 'a> {
+    prefix: NibbleVec,
+    inner: ChildIter<'a, K, V>,
+}
+
+impl<'a, K, V> Children<'a, K, V> {
+    pub fn new(key: NibbleVec, node: &'a TrieNode<K, V>) -> Self {
+        Children {
+            prefix: key,
+            inner: node.child_iter(),
+        }
+    }
+}
+
+impl <'a, K, V> Iterator for Children<'a, K, V> {
+    type Item = SubTrie<'a, K, V>;
+
+    fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
+        self.inner.next().map(|node| {
+            SubTrie {
+                // FIXME nasty, could use a Cow<TrieNode<K, V>> for subtries.
+                prefix: self.prefix.clone(),
+                node: &node
+            }
+        })
+    }
+}
+
 impl<K, V> TrieNode<K, V> {
     /// Helper function to get all the non-empty children of a node.
-    pub fn child_iter<'a>(&'a self) -> ChildIter<'a, K, V> {
+    fn child_iter<'a>(&'a self) -> ChildIter<'a, K, V> {
         fn id<'b, K, V>(x: &'b Option<Child<K, V>>) -> Option<&'b Child<K, V>> {
             x.as_ref()
         }
@@ -100,8 +129,8 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
         // Visit each node as it is reached from its parent (with special root handling).
         if !self.root_visited {
             self.root_visited = true;
-            self.stack.push(self.root.node.child_iter());
-            if let Some(kv) = self.root.node.kv_as_pair() {
+            self.stack.push(self.root.child_iter());
+            if let Some(kv) = self.root.kv_as_pair() {
                 return Some(kv);
             }
         }

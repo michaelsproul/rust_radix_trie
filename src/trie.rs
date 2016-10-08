@@ -1,5 +1,4 @@
 use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
-use iter::{Iter, Keys, Values};
 
 impl<K, V> Trie<K, V> where K: TrieKey {
     /// Create an empty Trie.
@@ -40,13 +39,6 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         }
         removed
     }
-
-    /// Fetch the number of key-value pairs stored in the Trie.
-    pub fn len(&self) -> usize {
-        self.length
-    }
-
-    generate_trie_node_methods!();
 
     /// Get a mutable reference to the value stored at this node, if any.
     pub fn value_mut(&mut self) -> Option<&mut V> {
@@ -123,22 +115,6 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.insert(key, default);
     }
 
-
-    /// Return an iterator over the keys and values of the Trie.
-    pub fn iter(&self) -> Iter<K, V> {
-        Iter::new(self)
-    }
-
-    /// Return an iterator over the keys of the Trie.
-    pub fn keys(&self) -> Keys<K, V> {
-        Keys::new(self.iter())
-    }
-
-    /// Return an iterator over the values of the Trie.
-    pub fn values(&self) -> Values<K, V> {
-        Values::new(self.iter())
-    }
-
     /// Check that the Trie invariants are satisfied - you shouldn't ever have to call this!
     /// Quite slow!
     #[doc(hidden)]
@@ -148,6 +124,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 }
 
+// TODO: may as well make these public methods.
 fn new_subtrie<'a, K, V>(prefix: NibbleVec, node: &'a TrieNode<K, V>) -> SubTrie<'a, K, V>
     where K: TrieKey
 {

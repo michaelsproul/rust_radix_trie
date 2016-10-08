@@ -105,6 +105,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
 
     /// Replace a value, returning the previous value if there was one.
     pub fn replace_value(&mut self, key: K, value: V) -> Option<V> {
+        // TODO: optimise this?
         let previous = self.take_value(&key);
         self.add_key_value(key, value);
         previous

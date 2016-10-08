@@ -1,6 +1,6 @@
 //! Proper testing, with QuickCheck.
 
-use {Trie, TrieKey};
+use {Trie, TrieKey, TrieCommon};
 use std::iter::FromIterator;
 use std::collections::{HashSet, HashMap};
 use quickcheck::{quickcheck, Gen, Arbitrary};

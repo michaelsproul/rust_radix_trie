@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use {Trie};
+use {Trie, TrieCommon};
 
 const TEST_DATA: [(&'static str, u32); 7] = [
         ("abcdefgh", 19),
@@ -237,4 +237,28 @@ fn subtrie_len() {
     assert_eq!(trie.subtrie(&"a").unwrap().len(), 6);
     assert_eq!(trie.subtrie(&"").unwrap().len(), trie.len());
     assert_eq!(trie.subtrie(&"bcdefgh").unwrap().len(), 1);
+}
+
+// Subtrie functions that return references should return references valid for
+// the lifetime of the *original trie* from which they were borrowed, NOT
+// just the lifetime of the subtrie (which may be shorter).
+#[test]
+fn subtrie_lifetime() {
+    let trie = test_trie();
+    let subtrie_value = {
+        let subtrie = trie.subtrie(&"ab").unwrap();
+        subtrie.value()
+    };
+    assert_eq!(*subtrie.value.unwrap(), 16);
+}
+
+#[test]
+fn subtrie_mut_lifetime() {
+    let mut trie = test_trie();
+    let subtrie_value = {
+        let mut subtrie = trie.subtrie_mut(&"ab").unwrap();
+        *subtrie.value_mut().unwrap() = 999;
+        subtrie.value()
+    };
+    assert_eq!(*subtrie_value.unwrap(), 999);
 }

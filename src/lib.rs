@@ -2,7 +2,7 @@
 //!
 //! To get started, see the docs for `Trie` below.
 
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 
 extern crate nibble_vec;
 #[cfg(test)] extern crate quickcheck;
@@ -10,6 +10,7 @@ extern crate nibble_vec;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
+pub use trie_common::TrieCommon;
 
 #[macro_use] mod macros;
 mod keys;
@@ -18,6 +19,7 @@ mod traversal;
 mod trie;
 mod subtrie;
 mod trie_node;
+mod trie_common;
 
 #[cfg(test)] mod test;
 #[cfg(test)] mod qc_test;
@@ -43,6 +45,8 @@ pub struct Trie<K, V> {
     node: TrieNode<K, V>,
 }
 
+/// Don't use this.
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct TrieNode<K, V> {
     /// Key fragments/bits associated with this node, such that joining the keys from all
