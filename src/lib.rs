@@ -12,6 +12,8 @@ pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use trie_common::TrieCommon;
 
+use std::borrow::Cow;
+
 #[macro_use] mod macros;
 mod keys;
 mod iter;
@@ -74,14 +76,14 @@ struct KeyValue<K, V> {
 /// Immutable view of a sub-tree a larger trie.
 #[derive(Debug)]
 pub struct SubTrie<'a, K: 'a, V: 'a> {
-    prefix: NibbleVec,
+    prefix: Cow<'a, NibbleVec>,
     node: &'a TrieNode<K, V>,
 }
 
 /// Mutable view of a sub-tree of a larger trie.
 #[derive(Debug)]
 pub struct SubTrieMut<'a, K: 'a, V: 'a> {
-    prefix: NibbleVec,
+    prefix: Cow<'a, NibbleVec>,
     length: &'a mut usize,
     node: &'a mut TrieNode<K, V>,
 }

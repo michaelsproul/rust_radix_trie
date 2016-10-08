@@ -62,7 +62,7 @@ impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'a Trie<K, V> where K: TrieKey
     }
 
     fn children(self) -> Children<'a, K, V> {
-        Children::new(self.node.key.clone(), &self.node)
+        Children::new(&self.node.key, &self.node)
     }
 }
 
@@ -79,7 +79,8 @@ impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'b SubTrie<'a, K, V> w
     }
 
     fn children(self) -> Children<'a, K, V> {
-        Children::new(self.prefix.clone(), self.node)
+        // FIXME
+        Children::new(&self.prefix, self.node)
     }
 }
 
@@ -94,7 +95,7 @@ impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for SubTrieMut<'a, K, V> where K: T
     fn len(self) -> usize { self._len() }
 
     fn children(self) -> Children<'a, K, V> {
-        Children::new(self.prefix.clone(), self.node)
+        Children::new(self.prefix, self.node)
     }
 }
 

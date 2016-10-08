@@ -1,5 +1,6 @@
 use std::slice;
 use std::iter::{Map, FilterMap, FromIterator};
+use std::borrow::Cow;
 
 use {Trie, TrieNode, TrieKey, SubTrie, NibbleVec};
 
@@ -72,29 +73,32 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
 
 /// Iterator over the child subtries of a trie.
 pub struct Children<'a, K: 'a, V: 'a> {
-    prefix: NibbleVec,
+    prefix: Cow<'a, NibbleVec>,
     inner: ChildIter<'a, K, V>,
 }
 
 impl<'a, K, V> Children<'a, K, V> {
-    pub fn new(key: NibbleVec, node: &'a TrieNode<K, V>) -> Self {
+    pub fn new_borrowed(key: &'a NibbleVec, node: &'a TrieNode<K, V>) -> Self {
         Children {
-            prefix: key,
+            prefix: Cow::Borrowed(key),
+            inner: node.child_iter(),
+        }
+    }
+
+    pub fn new_owned(key: NibbleVec, node: &'a TrieNode<K, V>) -> Self {
+        Children {
+            prefix: Cow::Owned(key),
             inner: node.child_iter(),
         }
     }
 }
 
-impl <'a, K, V> Iterator for Children<'a, K, V> {
+impl <'a, K, V> Iterator for Children<'a, K, V> where K: TrieKey {
     type Item = SubTrie<'a, K, V>;
 
     fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
         self.inner.next().map(|node| {
-            SubTrie {
-                // FIXME nasty, could use a Cow<TrieNode<K, V>> for subtries.
-                prefix: self.prefix.clone(),
-                node: &node
-            }
+            SubTrie::with_borrowed_prefix(&self.prefix, node)
         })
     }
 }

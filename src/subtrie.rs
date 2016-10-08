@@ -1,7 +1,24 @@
 use {TrieNode, SubTrie, SubTrieMut, SubTrieResult, NibbleVec};
 use keys::*;
+use std::borrow::Cow;
 
 impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
+    /// Create a new subtrie with an owned prefix.
+    pub fn with_owned_prefix(nv: NibbleVec, node: &'a TrieNode<K, V>) -> Self {
+        SubTrie {
+            prefix: Cow::Owned(nv),
+            node: node
+        }
+    }
+
+    /// Create a new subtrie with a reference to a prefix.
+    pub fn with_borrowed_prefix(nv: &'a NibbleVec, node: &'a TrieNode<K, V>) -> Self {
+        SubTrie {
+            prefix: Cow::Borrowed(nv),
+            node: node
+        }
+    }
+
     /// Look up the value for the given key, which should be an extension of this subtrie's key.
     pub fn get(&self, key: &K) -> SubTrieResult<&V> {
         subtrie_get(&self.prefix, self.node, key)
@@ -43,6 +60,15 @@ fn subtrie_size<'a, K, V>(node: &'a TrieNode<K, V>) -> usize {
 }
 
 impl <'a, K, V> SubTrieMut<'a, K, V> where K: TrieKey {
+    /// Create a new subtrie with an owned prefix.
+    pub fn with_owned_prefix(nv: NibbleVec, length: &'a mut usize, node: &'a mut TrieNode<K, V>) -> Self {
+        SubTrieMut {
+            prefix: Cow::Owned(nv),
+            length: length,
+            node: node,
+        }
+    }
+
     /// Look up the value for the given key, which should be an extension of this subtrie's key.
     pub fn get(&self, key: &K) -> SubTrieResult<&V> {
         subtrie_get(&self.prefix, &*self.node, key)
