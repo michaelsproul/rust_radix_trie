@@ -90,17 +90,15 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
     */
 
-    /*
     /// Fetch the closest descendant for a given key.
     ///
-    /// If the key is in the trie, this is the same as `get_node`.
-    pub fn get_descendant<'a>(&self, key: &K) -> Option<SubTrie<'a, K, V>> {
-        // FIXME:
-        // let key_fragments = key.encode();
-        // GetDescendant::run(self, (), key_fragments)
-        None
+    /// If the key is in the trie, this is the same as `subtrie`.
+    pub fn get_raw_descendant<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
+        let key_fragments = key.encode();
+        self.node.get_raw_descendant(&key_fragments).map(|node| {
+            new_subtrie(key_fragments, node)
+        })
     }
-    */
 
     /// Take a function `f` and apply it to the value stored at `key`.
     ///

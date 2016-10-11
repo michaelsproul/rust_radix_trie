@@ -14,7 +14,7 @@ pub use trie_common::TrieCommon;
 
 #[macro_use] mod macros;
 mod keys;
-mod iter;
+pub mod iter;
 mod traversal;
 mod trie;
 mod subtrie;
@@ -45,8 +45,7 @@ pub struct Trie<K, V> {
     node: TrieNode<K, V>,
 }
 
-/// Don't use this.
-#[doc(hidden)]
+/// Internal trie node (avoid using explicitly).
 #[derive(Debug)]
 pub struct TrieNode<K, V> {
     /// Key fragments/bits associated with this node, such that joining the keys from all

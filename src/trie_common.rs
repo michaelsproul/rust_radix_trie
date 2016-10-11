@@ -1,6 +1,7 @@
 use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut};
 use iter::*;
 
+/// Common functionality available for tries and subtries.
 pub trait TrieCommon<'a, K: 'a, V: 'a>: ContainsTrieNode<'a, K, V> where K: TrieKey, Self: Sized {
     /// Get the key stored at this node, if any.
     fn key(self) -> Option<&'a K> {
@@ -75,7 +76,7 @@ impl <'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for &'b SubTrie<'a, K
 
 impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'b SubTrie<'a, K, V> where K: TrieKey {
     fn len(self) -> usize {
-        self._len()
+        self.node.compute_size()
     }
 
     fn children(self) -> Children<'a, K, V> {
@@ -83,7 +84,7 @@ impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'b SubTrie<'a, K, V> w
     }
 }
 
-/// Subtrie mut.
+/// Mutable subtrie *by value* (consumes the subtrie).
 impl <'a, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for SubTrieMut<'a, K, V> where K: TrieKey {
     fn trie_node(self) -> &'a TrieNode<K, V> {
         self.node
@@ -91,13 +92,17 @@ impl <'a, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for SubTrieMut<'a, K, V> wher
 }
 
 impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for SubTrieMut<'a, K, V> where K: TrieKey {
-    fn len(self) -> usize { self._len() }
+    /// **Computes** from scratch.
+    fn len(self) -> usize {
+        self.node.compute_size()
+    }
 
     fn children(self) -> Children<'a, K, V> {
         Children::new(self.prefix.clone(), self.node)
     }
 }
 
+/// Mutable subtrie *by reference* (doesn't consume the subtrie, but limited).
 impl <'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'b, K, V> for &'b SubTrieMut<'a, K, V> where K: TrieKey {
     fn trie_node(self) -> &'b TrieNode<K, V> {
         self.node
@@ -106,7 +111,7 @@ impl <'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'b, K, V> for &'b SubTrieMut<'a
 
 impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'b, K, V> for &'b SubTrieMut<'a, K, V> where K: TrieKey {
     fn len(self) -> usize {
-        self._len()
+        self.node.compute_size()
     }
 
     fn children(self) -> Children<'b, K, V> {

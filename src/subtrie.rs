@@ -6,13 +6,6 @@ impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
     pub fn get(&self, key: &K) -> SubTrieResult<&V> {
         subtrie_get(&self.prefix, self.node, key)
     }
-
-    /// Compute the size of this subtrie.
-    ///
-    /// This isn't a constant time operation and involves a full traversal of the subtrie.
-    pub fn _len(&self) -> usize {
-        subtrie_size(&self.node)
-    }
 }
 
 fn subtrie_get<'a, K, V>(prefix: &NibbleVec, node: &'a TrieNode<K, V>, key: &K)
@@ -29,56 +22,52 @@ fn subtrie_get<'a, K, V>(prefix: &NibbleVec, node: &'a TrieNode<K, V>, key: &K)
     }
 }
 
-// TODO: put this on TrieNode.
-fn subtrie_size<'a, K, V>(node: &'a TrieNode<K, V>) -> usize {
-    let mut size = if node.key_value.is_some() { 1 } else { 0 };
-
-    for child in &node.children {
-        if let &Some(ref child) = child {
-            size += subtrie_size(&child);
-        }
-    }
-
-    size
-}
-
 impl <'a, K, V> SubTrieMut<'a, K, V> where K: TrieKey {
-    /// Look up the value for the given key, which should be an extension of this subtrie's key.
-    pub fn get(&self, key: &K) -> SubTrieResult<&V> {
-        subtrie_get(&self.prefix, &*self.node, key)
-    }
-
-    /// Compute the size of this subtrie.
-    ///
-    /// This isn't a constant time operation and involves a full traversal of the subtrie.
-    pub fn _len(&self) -> usize {
-        subtrie_size(&self.node)
-    }
-
     /// Mutable reference to the node's value.
     pub fn value_mut(&mut self) -> Option<&mut V> {
         self.node.value_mut()
     }
 
+    /// Look up the value for the given key, which should be an extension of this subtrie's key.
+    pub fn get(&self, key: &K) -> SubTrieResult<&V> {
+        subtrie_get(&self.prefix, &*self.node, key)
+    }
+
     /// Insert a value in this subtrie. The key should be an extension of this subtrie's key.
     pub fn insert(&mut self, key: K, value: V) -> SubTrieResult<V> {
         let key_enc = key.encode();
-        match match_keys(0, &self.prefix, &key_enc) {
-            KeyMatch::Full => {
-                Ok(self.node.replace_value(key, value))
+        let previous = match match_keys(0, &self.prefix, &key_enc) {
+            KeyMatch::Full => self.node.replace_value(key, value),
+            KeyMatch::FirstPrefix => self.node.insert(key, value, stripped(key_enc, &self.prefix)),
+            _ => {
+                return Err(());
             }
-            KeyMatch::FirstPrefix => {
-                let previous = self.node.insert(key, value, stripped(key_enc, &self.prefix));
-                if previous.is_none() {
-                    *self.length += 1;
-                }
-                Ok(previous)
-            }
-            _ => Err(())
+        };
+
+        if previous.is_none() {
+            *self.length += 1;
         }
+
+        Ok(previous)
     }
 
-    // TODO: remove!
+    /// Remove a value from this subtrie. The key should be an extension of this subtrie's key.
+    pub fn remove(&mut self, key: &K) -> SubTrieResult<V> {
+        let key_enc = key.encode();
+        let removed = match match_keys(0, &self.prefix, &key_enc) {
+            KeyMatch::Full => self.node.take_value(key),
+            KeyMatch::FirstPrefix => self.node.remove(key),
+            _ => {
+                return Err(());
+            }
+        };
+
+        if removed.is_some() {
+            *self.length -= 1;
+        }
+
+        Ok(removed)
+    }
 }
 
 fn stripped(mut key: NibbleVec, prefix: &NibbleVec) -> NibbleVec {

@@ -1,3 +1,5 @@
+//! Iterators over key-value pairs, keys, values and child subtries.
+
 use std::slice;
 use std::iter::{Map, FilterMap, FromIterator};
 

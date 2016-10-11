@@ -1,5 +1,7 @@
 * Iterators for subtries (add to macro) - DONE.
 * Clean interface for TrieNode, if it's gonna be public.
 * Tests for subtrie properties, length, etc.
-* get_descendant
+* get_raw_descendant - DONE.
+* get_descendant (real get successor, with > and >= behaviour).
+* get_ancestor (get ancestor with < behaviour).
 * get_raw_ancestor

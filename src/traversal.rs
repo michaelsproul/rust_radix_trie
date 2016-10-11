@@ -23,6 +23,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     pub fn get_ancestor(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
         get_ancestor(self, nv)
     }
+
+    pub fn get_raw_descendant(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
+        get_raw_descendant(self, nv)
+    }
 }
 
 macro_rules! get_func {
@@ -245,6 +249,36 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'
             }
         } else {
             return ancestor;
+        }
+    }
+}
+
+fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'a TrieNode<K, V>> {
+    if nv.len() == 0 {
+        return Some(trie);
+    }
+
+    let mut prev = trie;
+    let mut depth = 0;
+
+    loop {
+        let bucket = nv.get(depth) as usize;
+        let current = prev;
+        if let Some(ref child) = current.children[bucket] {
+            match match_keys(depth, &nv, &child.key) {
+                KeyMatch::Full | KeyMatch::FirstPrefix => {
+                    return Some(child);
+                }
+                KeyMatch::SecondPrefix => {
+                    depth += child.key.len();
+                    prev = child;
+                }
+                _ => {
+                    return None;
+                }
+            }
+        } else {
+            return None;
         }
     }
 }

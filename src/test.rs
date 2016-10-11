@@ -178,15 +178,13 @@ fn iter() {
     assert_eq!(expected, observed);
 }
 
-/*
 #[test]
-fn get_descendant() {
+fn get_raw_descendant() {
     let trie = test_trie();
-    assert_eq!(trie.get_descendant(&"abcdefgh").and_then(|t| t.value()), Some(&19));
-    assert_eq!(trie.get_descendant(&"abcdefg").and_then(|t| t.value()), Some(&19));
-    assert!(trie.get_descendant(&"acbg").is_none());
+    assert_eq!(trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()), Some(&19));
+    assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()), Some(&19));
+    assert!(trie.get_raw_descendant(&"acbg").is_none());
 }
-*/
 
 #[test]
 fn get_prefix_bug() {

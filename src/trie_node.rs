@@ -62,6 +62,20 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         })
     }
 
+    /// Compute the number of keys and values in this node's subtrie.
+    pub fn compute_size(&self) -> usize {
+        let mut size = if self.key_value.is_some() { 1 } else { 0 };
+
+        for child in &self.children {
+            if let &Some(ref child) = child {
+                // TODO: could unroll this recursion
+                size += child.compute_size();
+            }
+        }
+
+        size
+    }
+
     /// Add a child at the given index, given that none exists there already.
     pub fn add_child(&mut self, idx: usize, node: Box<TrieNode<K, V>>) {
         debug_assert!(self.children[idx].is_none());
