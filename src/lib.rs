@@ -2,17 +2,21 @@
 //!
 //! To get started, see the docs for `Trie` below.
 
-//#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 extern crate nibble_vec;
-#[cfg(test)] extern crate quickcheck;
-#[cfg(test)] extern crate rand;
+extern crate endian_type;
+#[cfg(test)]
+extern crate quickcheck;
+#[cfg(test)]
+extern crate rand;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use trie_common::TrieCommon;
 
-#[macro_use] mod macros;
+#[macro_use]
+mod macros;
 mod keys;
 pub mod iter;
 mod traversal;
@@ -21,8 +25,10 @@ mod subtrie;
 mod trie_node;
 mod trie_common;
 
-#[cfg(test)] mod test;
-#[cfg(test)] mod qc_test;
+#[cfg(test)]
+mod test;
+#[cfg(test)]
+mod qc_test;
 
 const BRANCH_FACTOR: usize = 16;
 
@@ -53,7 +59,6 @@ pub struct TrieNode<K, V> {
     key: NibbleVec,
 
     /// The key and value stored at this node.
-    // TODO: consider storing the key-value unboxed.
     key_value: Option<Box<KeyValue<K, V>>>,
 
     /// The number of children which are Some rather than None.
@@ -67,7 +72,7 @@ pub struct TrieNode<K, V> {
 #[derive(Debug)]
 struct KeyValue<K, V> {
     key: K,
-    value: V
+    value: V,
 }
 
 /// Immutable view of a sub-tree a larger trie.
