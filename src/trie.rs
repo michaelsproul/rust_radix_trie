@@ -49,7 +49,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn subtrie<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
         self.node.get(&key_fragments).map(|node| {
-            new_subtrie(key_fragments, node)
+            SubTrie::new(key_fragments, node)
         })
     }
 
@@ -58,7 +58,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         let key_fragments = key.encode();
         let length_ref = &mut self.length;
         self.node.get_mut(&key_fragments).map(move |node| {
-            new_subtrie_mut(key_fragments, length_ref, node)
+            SubTrieMut::new(key_fragments, length_ref, node)
         })
     }
 
@@ -72,7 +72,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn get_ancestor<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
         self.node.get_ancestor(&key_fragments).map(|node| {
-            new_subtrie(key_fragments, node)
+            SubTrie::new(key_fragments, node)
         })
     }
 
@@ -96,7 +96,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn get_raw_descendant<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
         self.node.get_raw_descendant(&key_fragments).map(|node| {
-            new_subtrie(key_fragments, node)
+            SubTrie::new(key_fragments, node)
         })
     }
 
@@ -119,25 +119,5 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     pub fn check_integrity(&self) -> bool {
         let (ok, length) = self.node.check_integrity_recursive(&NibbleVec::new());
         ok && length == self.length
-    }
-}
-
-// TODO: may as well make these public methods.
-fn new_subtrie<'a, K, V>(prefix: NibbleVec, node: &'a TrieNode<K, V>) -> SubTrie<'a, K, V>
-    where K: TrieKey
-{
-    SubTrie {
-        prefix: prefix,
-        node: node,
-    }
-}
-
-fn new_subtrie_mut<'a, K, V>(prefix: NibbleVec, length: &'a mut usize, node: &'a mut TrieNode<K, V>)
-    -> SubTrieMut<'a, K, V> where K: TrieKey
-{
-    SubTrieMut {
-        prefix: prefix,
-        length: length,
-        node: node,
     }
 }
