@@ -1,15 +1,13 @@
 use std::collections::HashSet;
 use {Trie, TrieCommon};
 
-const TEST_DATA: [(&'static str, u32); 7] = [
-        ("abcdefgh", 19),
-        ("abcdef", 18),
-        ("abcd", 17),
-        ("ab", 16),
-        ("a", 15),
-        ("acbdef", 30),
-        ("bcdefgh", 29)
-];
+const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
+                                             ("abcdef", 18),
+                                             ("abcd", 17),
+                                             ("ab", 16),
+                                             ("a", 15),
+                                             ("acbdef", 30),
+                                             ("bcdefgh", 29)];
 
 fn test_trie() -> Trie<&'static str, u32> {
     let mut trie = Trie::new();
@@ -87,10 +85,18 @@ fn insert_replace() {
 #[test]
 fn map_with_default() {
     let mut trie = test_trie();
-    trie.map_with_default(&"abcd",{|x| *x = *x+1},42);
-    assert_eq!(*trie.get(&"abcd").unwrap(),17+1);
-    trie.map_with_default(&"zzz",{|x| *x = *x+1},42);
-    assert_eq!(*trie.get(&"zzz").unwrap(),42);
+    trie.map_with_default(&"abcd",
+                          {
+                              |x| *x = *x + 1
+                          },
+                          42);
+    assert_eq!(*trie.get(&"abcd").unwrap(), 17 + 1);
+    trie.map_with_default(&"zzz",
+                          {
+                              |x| *x = *x + 1
+                          },
+                          42);
+    assert_eq!(*trie.get(&"zzz").unwrap(), 42);
 }
 
 #[test]
@@ -150,24 +156,23 @@ fn nearest_ancestor_no_child_fn() {
     assert_eq!(*anc.value().unwrap(), 5);
 }
 
-/*
-#[test]
-fn raw_ancestor() {
-    let mut t = Trie::new();
-
-    for &(key, _) in &TEST_DATA {
-        assert_eq!(t.get_raw_ancestor(&key).key(), t.key());
-    }
-
-    t.insert("wow", 0);
-    t.insert("hella", 1);
-    t.insert("hellb", 2);
-
-    // Ancestor should be "hell" node.
-    let anc = t.get_raw_ancestor(&"hello");
-    assert_eq!(anc.len(), 2);
-}
-*/
+// #[test]
+// fn raw_ancestor() {
+// let mut t = Trie::new();
+//
+// for &(key, _) in &TEST_DATA {
+// assert_eq!(t.get_raw_ancestor(&key).key(), t.key());
+// }
+//
+// t.insert("wow", 0);
+// t.insert("hella", 1);
+// t.insert("hellb", 2);
+//
+// Ancestor should be "hell" node.
+// let anc = t.get_raw_ancestor(&"hello");
+// assert_eq!(anc.len(), 2);
+// }
+//
 
 #[test]
 fn iter() {
@@ -181,8 +186,10 @@ fn iter() {
 #[test]
 fn get_raw_descendant() {
     let trie = test_trie();
-    assert_eq!(trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()), Some(&19));
-    assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()), Some(&19));
+    assert_eq!(trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()),
+               Some(&19));
+    assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()),
+               Some(&19));
     assert!(trie.get_raw_descendant(&"acbg").is_none());
 }
 
@@ -259,4 +266,12 @@ fn subtrie_mut_lifetime() {
         subtrie.value()
     };
     assert_eq!(*subtrie_value.unwrap(), 999);
+}
+
+#[test]
+fn test_int_types() {
+    let mut trie = Trie::new();
+    trie.insert(0x00ffu64, "asdf");
+    trie.insert(0xdeadbeefu64, "asdf");
+    assert!(trie.check_integrity());
 }

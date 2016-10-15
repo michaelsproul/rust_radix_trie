@@ -15,7 +15,7 @@ type ChildIter<'a, K, V> = FilterMap<RawChildIter<'a, K, V>, ChildMapFn<'a, K, V
 pub struct Iter<'a, K: 'a, V: 'a> {
     root: &'a TrieNode<K, V>,
     root_visited: bool,
-    stack: Vec<ChildIter<'a, K, V>>
+    stack: Vec<ChildIter<'a, K, V>>,
 }
 
 impl<'a, K, V> Iter<'a, K, V> {
@@ -23,21 +23,23 @@ impl<'a, K, V> Iter<'a, K, V> {
         Iter {
             root: root,
             root_visited: false,
-            stack: vec![]
+            stack: vec![],
         }
     }
 }
 
 /// Iterator over the keys of a Trie.
 pub struct Keys<'a, K: 'a, V: 'a> {
-    inner: Map<Iter<'a, K, V>, KeyMapFn<'a, K, V>>
+    inner: Map<Iter<'a, K, V>, KeyMapFn<'a, K, V>>,
 }
 
 type KeyMapFn<'a, K, V> = fn((&'a K, &'a V)) -> &'a K;
 
 impl<'a, K, V> Keys<'a, K, V> {
     pub fn new(iter: Iter<'a, K, V>) -> Keys<'a, K, V> {
-        fn first<'b, K, V>((k, _): (&'b K, &'b V)) -> &'b K { k }
+        fn first<'b, K, V>((k, _): (&'b K, &'b V)) -> &'b K {
+            k
+        }
         Keys { inner: iter.map(first) }
     }
 }
@@ -52,14 +54,16 @@ impl<'a, K, V> Iterator for Keys<'a, K, V> {
 
 /// Iterator over the values of a Trie.
 pub struct Values<'a, K: 'a, V: 'a> {
-    inner: Map<Iter<'a, K, V>, ValueMapFn<'a, K, V>>
+    inner: Map<Iter<'a, K, V>, ValueMapFn<'a, K, V>>,
 }
 
 type ValueMapFn<'a, K, V> = fn((&'a K, &'a V)) -> &'a V;
 
 impl<'a, K, V> Values<'a, K, V> {
     pub fn new(iter: Iter<'a, K, V>) -> Values<'a, K, V> {
-        fn second<'b, K, V>((_, v): (&'b K, &'b V)) -> &'b V { v }
+        fn second<'b, K, V>((_, v): (&'b K, &'b V)) -> &'b V {
+            v
+        }
         Values { inner: iter.map(second) }
     }
 }
@@ -87,7 +91,7 @@ impl<'a, K, V> Children<'a, K, V> {
     }
 }
 
-impl <'a, K, V> Iterator for Children<'a, K, V> {
+impl<'a, K, V> Iterator for Children<'a, K, V> {
     type Item = SubTrie<'a, K, V>;
 
     fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
@@ -95,7 +99,7 @@ impl <'a, K, V> Iterator for Children<'a, K, V> {
             SubTrie {
                 // FIXME nasty, could use a Cow<TrieNode<K, V>> for subtries.
                 prefix: self.prefix.clone(),
-                node: &node
+                node: &node,
             }
         })
     }
@@ -119,7 +123,7 @@ impl<K, V> TrieNode<K, V> {
 
 enum IterAction<'a, K: 'a, V: 'a> {
     Push(&'a TrieNode<K, V>),
-    Pop
+    Pop,
 }
 
 impl<'a, K, V> Iterator for Iter<'a, K, V> {
@@ -142,10 +146,10 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
                 Some(stack_top) => {
                     match stack_top.next() {
                         Some(child) => Push(&child),
-                        None => Pop
+                        None => Pop,
                     }
                 }
-                None => return None
+                None => return None,
             };
 
             match action {
@@ -155,14 +159,20 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
                         return Some(kv);
                     }
                 }
-                Pop => { self.stack.pop(); }
+                Pop => {
+                    self.stack.pop();
+                }
             }
         }
     }
 }
 
-impl<K, V> FromIterator<(K, V)> for Trie<K, V> where K: TrieKey {
-    fn from_iter<T>(iter: T) -> Trie<K, V> where T: IntoIterator<Item=(K, V)> {
+impl<K, V> FromIterator<(K, V)> for Trie<K, V>
+    where K: TrieKey
+{
+    fn from_iter<T>(iter: T) -> Trie<K, V>
+        where T: IntoIterator<Item = (K, V)>
+    {
         let mut trie = Trie::new();
         for (k, v) in iter {
             trie.insert(k, v);

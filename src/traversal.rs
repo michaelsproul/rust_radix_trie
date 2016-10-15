@@ -3,7 +3,9 @@
 use {TrieNode, TrieKey, NibbleVec};
 use keys::{match_keys, KeyMatch};
 
-impl<K, V> TrieNode<K, V> where K: TrieKey {
+impl<K, V> TrieNode<K, V>
+    where K: TrieKey
+{
     pub fn get(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
         iterative_get(self, nv)
     }
@@ -70,8 +72,12 @@ macro_rules! get_func {
 get_func!(name: iterative_get, trie_type: &'a TrieNode<K, V>, mutability: );
 get_func!(name: iterative_get_mut, trie_type: &'a mut TrieNode<K, V>, mutability: mut);
 
-fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>, key: K, value: V, mut nv: NibbleVec)
-    -> Option<V> where K: TrieKey
+fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>,
+                              key: K,
+                              value: V,
+                              mut nv: NibbleVec)
+                              -> Option<V>
+    where K: TrieKey
 {
     if nv.len() == 0 {
         return trie.replace_value(key, value);
@@ -96,10 +102,8 @@ fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>, key: K, value: V, mu
                     let new_key = nv.split(depth + idx);
                     let new_key_bucket = new_key.get(0) as usize;
 
-                    child.add_child(
-                        new_key_bucket,
-                        Box::new(TrieNode::with_key_value(new_key, key, value))
-                    );
+                    child.add_child(new_key_bucket,
+                                    Box::new(TrieNode::with_key_value(new_key, key, value)));
 
                     return None;
                 }
@@ -115,7 +119,8 @@ fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>, key: K, value: V, mu
             }
         } else {
             let node_key = nv.split(depth);
-            current.add_child(bucket, Box::new(TrieNode::with_key_value(node_key, key, value)));
+            current.add_child(bucket,
+                              Box::new(TrieNode::with_key_value(node_key, key, value)));
             return None;
         }
     }
@@ -155,11 +160,13 @@ fn recursive_remove<K, V>(trie: &mut TrieNode<K, V>, key: &K) -> Option<V>
                 rec_remove(trie, child, bucket, key, depth, &nv)
             }
         }
-        None => None
+        None => None,
     }
 }
 
-fn get_merge_child<K, V>(trie: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>> where K: TrieKey {
+fn get_merge_child<K, V>(trie: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>>
+    where K: TrieKey
+{
     let mut child = trie.take_only_child();
 
     // Join the child's key onto the existing one.
@@ -169,8 +176,14 @@ fn get_merge_child<K, V>(trie: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>> where
 }
 
 // Tail-recursive remove function used by `recursive_remove`.
-fn rec_remove<K, V>(parent: &mut TrieNode<K, V>, mut middle: Box<TrieNode<K, V>>, prev_bucket: usize, key: &K, depth: usize, nv: &NibbleVec)
-    -> Option<V> where K: TrieKey
+fn rec_remove<K, V>(parent: &mut TrieNode<K, V>,
+                    mut middle: Box<TrieNode<K, V>>,
+                    prev_bucket: usize,
+                    key: &K,
+                    depth: usize,
+                    nv: &NibbleVec)
+                    -> Option<V>
+    where K: TrieKey
 {
     let bucket = nv.get(depth) as usize;
 
@@ -207,12 +220,10 @@ fn rec_remove<K, V>(parent: &mut TrieNode<K, V>, mut middle: Box<TrieNode<K, V>>
                     let new_depth = depth + child.key.len();
                     rec_remove(middle, child, bucket, key, new_depth, nv)
                 }
-                _ => None
+                _ => None,
             }
         }
-        None => {
-            None
-        }
+        None => None,
     }
 }
 
@@ -238,7 +249,8 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'
                 KeyMatch::Full => {
                     return child.as_value_node().or(ancestor);
                 }
-                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                KeyMatch::FirstPrefix |
+                KeyMatch::Partial(_) => {
                     return ancestor;
                 }
                 KeyMatch::SecondPrefix => {
@@ -253,7 +265,9 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'
     }
 }
 
-fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'a TrieNode<K, V>> {
+fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>,
+                                nv: &NibbleVec)
+                                -> Option<&'a TrieNode<K, V>> {
     if nv.len() == 0 {
         return Some(trie);
     }

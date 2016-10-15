@@ -2,7 +2,10 @@ use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut};
 use iter::*;
 
 /// Common functionality available for tries and subtries.
-pub trait TrieCommon<'a, K: 'a, V: 'a>: ContainsTrieNode<'a, K, V> where K: TrieKey, Self: Sized {
+pub trait TrieCommon<'a, K: 'a, V: 'a>: ContainsTrieNode<'a, K, V>
+    where K: TrieKey,
+          Self: Sized
+{
     /// Get the key stored at this node, if any.
     fn key(self) -> Option<&'a K> {
         self.trie_node().key()
@@ -46,18 +49,24 @@ pub trait TrieCommon<'a, K: 'a, V: 'a>: ContainsTrieNode<'a, K, V> where K: Trie
 }
 
 /// Helper trait for Trie/SubTrie/SubTrieMut, which all contain a trie node.
-pub trait ContainsTrieNode<'a, K: 'a, V: 'a> where K: TrieKey {
+pub trait ContainsTrieNode<'a, K: 'a, V: 'a>
+    where K: TrieKey
+{
     fn trie_node(self) -> &'a TrieNode<K, V>;
 }
 
 /// Regular trie.
-impl <'a, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for &'a Trie<K, V> where K: TrieKey {
+impl<'a, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for &'a Trie<K, V>
+    where K: TrieKey
+{
     fn trie_node(self) -> &'a TrieNode<K, V> {
         &self.node
     }
 }
 
-impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'a Trie<K, V> where K: TrieKey {
+impl<'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'a Trie<K, V>
+    where K: TrieKey
+{
     fn len(self) -> usize {
         self.length
     }
@@ -68,13 +77,17 @@ impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'a Trie<K, V> where K: TrieKey
 }
 
 /// Subtrie.
-impl <'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for &'b SubTrie<'a, K, V> where K: TrieKey {
+impl<'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for &'b SubTrie<'a, K, V>
+    where K: TrieKey
+{
     fn trie_node(self) -> &'a TrieNode<K, V> {
         self.node
     }
 }
 
-impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'b SubTrie<'a, K, V> where K: TrieKey {
+impl<'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'b SubTrie<'a, K, V>
+    where K: TrieKey
+{
     fn len(self) -> usize {
         self.node.compute_size()
     }
@@ -85,13 +98,17 @@ impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'a, K, V> for &'b SubTrie<'a, K, V> w
 }
 
 /// Mutable subtrie *by value* (consumes the subtrie).
-impl <'a, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for SubTrieMut<'a, K, V> where K: TrieKey {
+impl<'a, K: 'a, V: 'a> ContainsTrieNode<'a, K, V> for SubTrieMut<'a, K, V>
+    where K: TrieKey
+{
     fn trie_node(self) -> &'a TrieNode<K, V> {
         self.node
     }
 }
 
-impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for SubTrieMut<'a, K, V> where K: TrieKey {
+impl<'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for SubTrieMut<'a, K, V>
+    where K: TrieKey
+{
     /// **Computes** from scratch.
     fn len(self) -> usize {
         self.node.compute_size()
@@ -103,13 +120,17 @@ impl <'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for SubTrieMut<'a, K, V> where K: T
 }
 
 /// Mutable subtrie *by reference* (doesn't consume the subtrie, but limited).
-impl <'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'b, K, V> for &'b SubTrieMut<'a, K, V> where K: TrieKey {
+impl<'a: 'b, 'b, K: 'a, V: 'a> ContainsTrieNode<'b, K, V> for &'b SubTrieMut<'a, K, V>
+    where K: TrieKey
+{
     fn trie_node(self) -> &'b TrieNode<K, V> {
         self.node
     }
 }
 
-impl <'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'b, K, V> for &'b SubTrieMut<'a, K, V> where K: TrieKey {
+impl<'a: 'b, 'b, K: 'a, V: 'a> TrieCommon<'b, K, V> for &'b SubTrieMut<'a, K, V>
+    where K: TrieKey
+{
     fn len(self) -> usize {
         self.node.compute_size()
     }

@@ -1,28 +1,32 @@
 use {TrieNode, SubTrie, SubTrieMut, SubTrieResult, NibbleVec};
 use keys::*;
 
-impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
+impl<'a, K, V> SubTrie<'a, K, V>
+    where K: TrieKey
+{
     /// Look up the value for the given key, which should be an extension of this subtrie's key.
     pub fn get(&self, key: &K) -> SubTrieResult<&V> {
         subtrie_get(&self.prefix, self.node, key)
     }
 }
 
-fn subtrie_get<'a, K, V>(prefix: &NibbleVec, node: &'a TrieNode<K, V>, key: &K)
-    -> SubTrieResult<&'a V>
+fn subtrie_get<'a, K, V>(prefix: &NibbleVec,
+                         node: &'a TrieNode<K, V>,
+                         key: &K)
+                         -> SubTrieResult<&'a V>
     where K: TrieKey
 {
     let key_enc = key.encode();
     match match_keys(0, prefix, &key_enc) {
         KeyMatch::Full => Ok(node.value()),
-        KeyMatch::FirstPrefix => {
-            Ok(node.get(&stripped(key_enc, prefix)).and_then(TrieNode::value))
-        }
-        _ => Err(())
+        KeyMatch::FirstPrefix => Ok(node.get(&stripped(key_enc, prefix)).and_then(TrieNode::value)),
+        _ => Err(()),
     }
 }
 
-impl <'a, K, V> SubTrieMut<'a, K, V> where K: TrieKey {
+impl<'a, K, V> SubTrieMut<'a, K, V>
+    where K: TrieKey
+{
     /// Mutable reference to the node's value.
     pub fn value_mut(&mut self) -> Option<&mut V> {
         self.node.value_mut()

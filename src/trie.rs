@@ -1,6 +1,8 @@
 use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
 
-impl<K, V> Trie<K, V> where K: TrieKey {
+impl<K, V> Trie<K, V>
+    where K: TrieKey
+{
     /// Create an empty Trie.
     pub fn new() -> Trie<K, V> {
         Trie {
@@ -48,18 +50,16 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Fetch a reference to the subtrie for a given key.
     pub fn subtrie<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
-        self.node.get(&key_fragments).map(|node| {
-            new_subtrie(key_fragments, node)
-        })
+        self.node.get(&key_fragments).map(|node| new_subtrie(key_fragments, node))
     }
 
     /// Fetch a mutable reference to the subtrie for a given key.
     pub fn subtrie_mut<'a>(&'a mut self, key: &K) -> Option<SubTrieMut<'a, K, V>> {
         let key_fragments = key.encode();
         let length_ref = &mut self.length;
-        self.node.get_mut(&key_fragments).map(move |node| {
-            new_subtrie_mut(key_fragments, length_ref, node)
-        })
+        self.node
+            .get_mut(&key_fragments)
+            .map(move |node| new_subtrie_mut(key_fragments, length_ref, node))
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
@@ -71,9 +71,7 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Invariant: `result.is_some() => result.key_value.is_some()`.
     pub fn get_ancestor<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
-        self.node.get_ancestor(&key_fragments).map(|node| {
-            new_subtrie(key_fragments, node)
-        })
+        self.node.get_ancestor(&key_fragments).map(|node| new_subtrie(key_fragments, node))
     }
 
     /// Fetch the closest ancestor *value* for a given key.
@@ -84,26 +82,27 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 
     // FIXME
-    /*
-    pub fn get_raw_ancestor(&self, key: &K) -> &TrieNode<K, V> {
-        GetRawAncestor::run(self, (), key.encode()).unwrap()
-    }
-    */
+    //
+    // pub fn get_raw_ancestor(&self, key: &K) -> &TrieNode<K, V> {
+    // GetRawAncestor::run(self, (), key.encode()).unwrap()
+    // }
+    //
+
 
     /// Fetch the closest descendant for a given key.
     ///
     /// If the key is in the trie, this is the same as `subtrie`.
     pub fn get_raw_descendant<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
-        self.node.get_raw_descendant(&key_fragments).map(|node| {
-            new_subtrie(key_fragments, node)
-        })
+        self.node.get_raw_descendant(&key_fragments).map(|node| new_subtrie(key_fragments, node))
     }
 
     /// Take a function `f` and apply it to the value stored at `key`.
     ///
     /// If no value is stored at `key`, store `default`.
-    pub fn map_with_default<F>(&mut self, key : K, f : F, default: V) where F: Fn(&mut V) {
+    pub fn map_with_default<F>(&mut self, key: K, f: F, default: V)
+        where F: Fn(&mut V)
+    {
         {
             if let Some(v) = self.get_mut(&key) {
                 f(v);
@@ -132,8 +131,11 @@ fn new_subtrie<'a, K, V>(prefix: NibbleVec, node: &'a TrieNode<K, V>) -> SubTrie
     }
 }
 
-fn new_subtrie_mut<'a, K, V>(prefix: NibbleVec, length: &'a mut usize, node: &'a mut TrieNode<K, V>)
-    -> SubTrieMut<'a, K, V> where K: TrieKey
+fn new_subtrie_mut<'a, K, V>(prefix: NibbleVec,
+                             length: &'a mut usize,
+                             node: &'a mut TrieNode<K, V>)
+                             -> SubTrieMut<'a, K, V>
+    where K: TrieKey
 {
     SubTrieMut {
         prefix: prefix,
