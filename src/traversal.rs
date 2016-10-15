@@ -24,6 +24,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         get_ancestor(self, nv)
     }
 
+    pub fn get_raw_ancestor(&self, nv: &NibbleVec) -> &TrieNode<K, V> {
+        get_raw_ancestor(self, nv)
+    }
+
     pub fn get_raw_descendant(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
         get_raw_descendant(self, nv)
     }
@@ -244,6 +248,43 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'
                 KeyMatch::SecondPrefix => {
                     depth += child.key.len();
                     ancestor = child.as_value_node().or(ancestor);
+                    prev = child;
+                }
+            }
+        } else {
+            return ancestor;
+        }
+    }
+}
+
+// TODO: use the same structure for ancestor and raw_ancestor, just need a higher-order func.
+fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> &'a TrieNode<K, V>
+    where K: TrieKey
+{
+    if nv.len() == 0 {
+        return trie;
+    }
+
+    let mut prev = trie;
+    // The ancestor is such that all nodes upto and including `prev` have
+    // already been considered.
+    let mut ancestor = prev;
+    let mut depth = 0;
+
+    loop {
+        let bucket = nv.get(depth) as usize;
+        let current = prev;
+        if let Some(ref child) = current.children[bucket] {
+            match match_keys(depth, &nv, &child.key) {
+                KeyMatch::Full => {
+                    return child;
+                }
+                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                    return ancestor;
+                }
+                KeyMatch::SecondPrefix => {
+                    depth += child.key.len();
+                    ancestor = child;
                     prev = child;
                 }
             }

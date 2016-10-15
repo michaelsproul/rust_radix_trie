@@ -83,12 +83,12 @@ impl<K, V> Trie<K, V> where K: TrieKey {
         self.get_ancestor(key).and_then(|t| t.node.value())
     }
 
-    // FIXME
-    /*
-    pub fn get_raw_ancestor(&self, key: &K) -> &TrieNode<K, V> {
-        GetRawAncestor::run(self, (), key.encode()).unwrap()
+    pub fn get_raw_ancestor<'a>(&'a self, key: &K) -> SubTrie<'a, K, V> {
+        let nv = key.encode();
+        // FIXME: bug around usage of nibble vec.
+        let ancestor_node = self.node.get_raw_ancestor(&nv);
+        SubTrie::new(nv, ancestor_node)
     }
-    */
 
     /// Fetch the closest descendant for a given key.
     ///

@@ -150,7 +150,6 @@ fn nearest_ancestor_no_child_fn() {
     assert_eq!(*anc.value().unwrap(), 5);
 }
 
-/*
 #[test]
 fn raw_ancestor() {
     let mut t = Trie::new();
@@ -167,7 +166,6 @@ fn raw_ancestor() {
     let anc = t.get_raw_ancestor(&"hello");
     assert_eq!(anc.len(), 2);
 }
-*/
 
 #[test]
 fn iter() {
