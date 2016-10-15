@@ -3,6 +3,8 @@
 use {TrieNode, TrieKey, NibbleVec};
 use keys::{match_keys, KeyMatch};
 
+use self::DescendantResult::*;
+
 impl<K, V> TrieNode<K, V> where K: TrieKey {
     pub fn get(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
         iterative_get(self, nv)
@@ -20,15 +22,15 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         recursive_remove(self, key)
     }
 
-    pub fn get_ancestor(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
+    pub fn get_ancestor(&self, nv: &NibbleVec) -> Option<(&TrieNode<K, V>, usize)> {
         get_ancestor(self, nv)
     }
 
-    pub fn get_raw_ancestor(&self, nv: &NibbleVec) -> &TrieNode<K, V> {
+    pub fn get_raw_ancestor(&self, nv: &NibbleVec) -> (&TrieNode<K, V>, usize) {
         get_raw_ancestor(self, nv)
     }
 
-    pub fn get_raw_descendant(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
+    pub fn get_raw_descendant<'a>(&'a self, nv: &NibbleVec) -> Option<DescendantResult<'a, K, V>> {
         get_raw_descendant(self, nv)
     }
 }
@@ -220,12 +222,11 @@ fn rec_remove<K, V>(parent: &mut TrieNode<K, V>, mut middle: Box<TrieNode<K, V>>
     }
 }
 
-// TODO: Mutable ancestor will be hard.
-fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'a TrieNode<K, V>>
+fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<(&'a TrieNode<K, V>, usize)>
     where K: TrieKey
 {
     if nv.len() == 0 {
-        return trie.as_value_node();
+        return trie.as_value_node().map(|node| (node, 0));
     }
 
     let mut prev = trie;
@@ -240,10 +241,11 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'
         if let Some(ref child) = current.children[bucket] {
             match match_keys(depth, &nv, &child.key) {
                 KeyMatch::Full => {
-                    return child.as_value_node().or(ancestor);
+                    return child.as_value_node().map(|node| (node, depth + node.key.len()))
+                        .or(ancestor.map(|anc| (anc, depth)));
                 }
                 KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
-                    return ancestor;
+                    return ancestor.map(|anc| (anc, depth));
                 }
                 KeyMatch::SecondPrefix => {
                     depth += child.key.len();
@@ -252,17 +254,17 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'
                 }
             }
         } else {
-            return ancestor;
+            return ancestor.map(|anc| (anc, depth));
         }
     }
 }
 
-// TODO: use the same structure for ancestor and raw_ancestor, just need a higher-order func.
-fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> &'a TrieNode<K, V>
+fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec)
+    -> (&'a TrieNode<K, V>, usize)
     where K: TrieKey
 {
     if nv.len() == 0 {
-        return trie;
+        return (trie, 0);
     }
 
     let mut prev = trie;
@@ -277,10 +279,10 @@ fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> &'a T
         if let Some(ref child) = current.children[bucket] {
             match match_keys(depth, &nv, &child.key) {
                 KeyMatch::Full => {
-                    return child;
+                    return (child, depth + child.key.len());
                 }
                 KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
-                    return ancestor;
+                    return (ancestor, depth);
                 }
                 KeyMatch::SecondPrefix => {
                     depth += child.key.len();
@@ -289,14 +291,20 @@ fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> &'a T
                 }
             }
         } else {
-            return ancestor;
+            return (ancestor, depth);
         }
     }
 }
 
-fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<&'a TrieNode<K, V>> {
+pub enum DescendantResult<'a, K: 'a, V: 'a> {
+    ChompKey(&'a TrieNode<K, V>, usize),
+    ExtendKey(&'a TrieNode<K, V>, &'a NibbleVec),
+}
+
+fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec)
+    -> Option<DescendantResult<'a, K, V>> {
     if nv.len() == 0 {
-        return Some(trie);
+        return Some(ChompKey(trie, 0));
     }
 
     let mut prev = trie;
@@ -307,8 +315,11 @@ fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Opt
         let current = prev;
         if let Some(ref child) = current.children[bucket] {
             match match_keys(depth, &nv, &child.key) {
-                KeyMatch::Full | KeyMatch::FirstPrefix => {
-                    return Some(child);
+                KeyMatch::Full => {
+                    return Some(ChompKey(child, depth + child.key.len()));
+                }
+                KeyMatch::FirstPrefix => {
+                    return Some(ExtendKey(child, &child.key));
                 }
                 KeyMatch::SecondPrefix => {
                     depth += child.key.len();

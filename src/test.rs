@@ -258,3 +258,12 @@ fn subtrie_mut_lifetime() {
     };
     assert_eq!(*subtrie_value.unwrap(), 999);
 }
+
+#[test]
+fn ancestor_key() {
+    let trie = test_trie();
+    let subtrie = trie.get_ancestor(&"abcde").unwrap();
+    assert_eq!(*subtrie.key().unwrap(), "abcd");
+    assert_eq!(*subtrie.get(&"abcdef").unwrap().unwrap(), 18);
+    assert_eq!(*subtrie.get(&"abcdefgh").unwrap().unwrap(), 19);
+}

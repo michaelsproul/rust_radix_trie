@@ -1,4 +1,5 @@
 use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
+use traversal::DescendantResult::*;
 
 impl<K, V> Trie<K, V> where K: TrieKey {
     /// Create an empty Trie.
@@ -70,8 +71,9 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     ///
     /// Invariant: `result.is_some() => result.key_value.is_some()`.
     pub fn get_ancestor<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
-        let key_fragments = key.encode();
-        self.node.get_ancestor(&key_fragments).map(|node| {
+        let mut key_fragments = key.encode();
+        self.node.get_ancestor(&key_fragments).map(|(node, node_key_len)| {
+            key_fragments.split(node_key_len);
             SubTrie::new(key_fragments, node)
         })
     }
@@ -84,9 +86,9 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     }
 
     pub fn get_raw_ancestor<'a>(&'a self, key: &K) -> SubTrie<'a, K, V> {
-        let nv = key.encode();
-        // FIXME: bug around usage of nibble vec.
-        let ancestor_node = self.node.get_raw_ancestor(&nv);
+        let mut nv = key.encode();
+        let (ancestor_node, depth) = self.node.get_raw_ancestor(&nv);
+        nv.split(depth);
         SubTrie::new(nv, ancestor_node)
     }
 
@@ -94,9 +96,16 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     ///
     /// If the key is in the trie, this is the same as `subtrie`.
     pub fn get_raw_descendant<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
-        let key_fragments = key.encode();
-        self.node.get_raw_descendant(&key_fragments).map(|node| {
-            SubTrie::new(key_fragments, node)
+        let mut nv = key.encode();
+        self.node.get_raw_descendant(&nv).map(|desc| {
+            let (node, prefix) = match desc {
+                ChompKey(node, depth) => {
+                    nv.split(depth);
+                    (node, nv)
+                }
+                ExtendKey(node, extension) => (node, nv.join(extension)),
+            };
+            SubTrie::new(prefix, node)
         })
     }
 
