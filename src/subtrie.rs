@@ -1,7 +1,9 @@
 use {TrieNode, SubTrie, SubTrieMut, SubTrieResult, NibbleVec};
 use keys::*;
 
-impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
+impl<'a, K, V> SubTrie<'a, K, V>
+    where K: TrieKey
+{
     pub fn new(prefix: NibbleVec, node: &'a TrieNode<K, V>) -> Self {
         SubTrie {
             prefix: prefix,
@@ -29,7 +31,9 @@ fn subtrie_get<'a, K, V>(prefix: &NibbleVec,
     }
 }
 
-impl <'a, K, V> SubTrieMut<'a, K, V> where K: TrieKey {
+impl<'a, K, V> SubTrieMut<'a, K, V>
+    where K: TrieKey
+{
     pub fn new(prefix: NibbleVec, length: &'a mut usize, node: &'a mut TrieNode<K, V>) -> Self {
         SubTrieMut {
             prefix: prefix,

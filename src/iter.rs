@@ -98,7 +98,7 @@ impl<'a, K, V> Iterator for Children<'a, K, V> {
         self.inner.next().map(|node| {
             SubTrie {
                 prefix: self.prefix.clone().join(&node.key),
-                node: &node
+                node: &node,
             }
         })
     }

@@ -233,7 +233,9 @@ fn rec_remove<K, V>(parent: &mut TrieNode<K, V>,
     }
 }
 
-fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<(&'a TrieNode<K, V>, usize)>
+fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>,
+                          nv: &NibbleVec)
+                          -> Option<(&'a TrieNode<K, V>, usize)>
     where K: TrieKey
 {
     if nv.len() == 0 {
@@ -252,10 +254,12 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<(&
         if let Some(ref child) = current.children[bucket] {
             match match_keys(depth, &nv, &child.key) {
                 KeyMatch::Full => {
-                    return child.as_value_node().map(|node| (node, depth + node.key.len()))
+                    return child.as_value_node()
+                        .map(|node| (node, depth + node.key.len()))
                         .or(ancestor.map(|anc| (anc, depth)));
                 }
-                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                KeyMatch::FirstPrefix |
+                KeyMatch::Partial(_) => {
                     return ancestor.map(|anc| (anc, depth));
                 }
                 KeyMatch::SecondPrefix => {
@@ -270,8 +274,9 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec) -> Option<(&
     }
 }
 
-fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec)
-    -> (&'a TrieNode<K, V>, usize)
+fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>,
+                              nv: &NibbleVec)
+                              -> (&'a TrieNode<K, V>, usize)
     where K: TrieKey
 {
     if nv.len() == 0 {
@@ -292,7 +297,8 @@ fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec)
                 KeyMatch::Full => {
                     return (child, depth + child.key.len());
                 }
-                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                KeyMatch::FirstPrefix |
+                KeyMatch::Partial(_) => {
                     return (ancestor, depth);
                 }
                 KeyMatch::SecondPrefix => {
@@ -312,8 +318,9 @@ pub enum DescendantResult<'a, K: 'a, V: 'a> {
     ExtendKey(&'a TrieNode<K, V>, &'a NibbleVec),
 }
 
-fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &NibbleVec)
-    -> Option<DescendantResult<'a, K, V>> {
+fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>,
+                                nv: &NibbleVec)
+                                -> Option<DescendantResult<'a, K, V>> {
     if nv.len() == 0 {
         return Some(ChompKey(trie, 0));
     }

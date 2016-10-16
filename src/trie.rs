@@ -51,18 +51,16 @@ impl<K, V> Trie<K, V>
     /// Fetch a reference to the subtrie for a given key.
     pub fn subtrie<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
-        self.node.get(&key_fragments).map(|node| {
-            SubTrie::new(key_fragments, node)
-        })
+        self.node.get(&key_fragments).map(|node| SubTrie::new(key_fragments, node))
     }
 
     /// Fetch a mutable reference to the subtrie for a given key.
     pub fn subtrie_mut<'a>(&'a mut self, key: &K) -> Option<SubTrieMut<'a, K, V>> {
         let key_fragments = key.encode();
         let length_ref = &mut self.length;
-        self.node.get_mut(&key_fragments).map(move |node| {
-            SubTrieMut::new(key_fragments, length_ref, node)
-        })
+        self.node
+            .get_mut(&key_fragments)
+            .map(move |node| SubTrieMut::new(key_fragments, length_ref, node))
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
