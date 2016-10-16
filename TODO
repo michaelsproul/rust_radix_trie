@@ -1,8 +1,0 @@
-* Tests for subtrie properties, length, etc.
-* get_descendant (real get successor, with > and >= behaviour).
-* get_ancestor (get ancestor with < behaviour).
-* get_raw_ancestor
-
-* Iterators for subtries - DONE.
-* Clean interface for TrieNode, if it's gonna be public - DONEISH.
-* get_raw_descendant - DONE.
