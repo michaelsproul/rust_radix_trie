@@ -93,8 +93,7 @@ impl <'a, K, V> Iterator for Children<'a, K, V> {
     fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
         self.inner.next().map(|node| {
             SubTrie {
-                // FIXME: needs to be the child's key
-                prefix: self.prefix.clone(),
+                prefix: self.prefix.clone().join(&node.key),
                 node: &node
             }
         })

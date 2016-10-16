@@ -267,3 +267,14 @@ fn ancestor_key() {
     assert_eq!(*subtrie.get(&"abcdef").unwrap().unwrap(), 18);
     assert_eq!(*subtrie.get(&"abcdefgh").unwrap().unwrap(), 19);
 }
+
+#[test]
+fn child_subtrie_keys() {
+    let trie = test_trie();
+    let subtrie = trie.subtrie(&"abcd").unwrap();
+    for subsubtrie in subtrie.children() {
+        // This subtrie should be for "abcde".
+        assert_eq!(*subsubtrie.get(&"abcdef").unwrap().unwrap(), 18);
+        assert_eq!(*subsubtrie.get(&"abcdefgh").unwrap().unwrap(), 19);
+    }
+}
