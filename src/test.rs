@@ -1,15 +1,13 @@
 use std::collections::HashSet;
 use {Trie, TrieCommon};
 
-const TEST_DATA: [(&'static str, u32); 7] = [
-        ("abcdefgh", 19),
-        ("abcdef", 18),
-        ("abcd", 17),
-        ("ab", 16),
-        ("a", 15),
-        ("acbdef", 30),
-        ("bcdefgh", 29)
-];
+const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
+                                             ("abcdef", 18),
+                                             ("abcd", 17),
+                                             ("ab", 16),
+                                             ("a", 15),
+                                             ("acbdef", 30),
+                                             ("bcdefgh", 29)];
 
 fn test_trie() -> Trie<&'static str, u32> {
     let mut trie = Trie::new();
@@ -87,10 +85,18 @@ fn insert_replace() {
 #[test]
 fn map_with_default() {
     let mut trie = test_trie();
-    trie.map_with_default(&"abcd",{|x| *x = *x+1},42);
-    assert_eq!(*trie.get(&"abcd").unwrap(),17+1);
-    trie.map_with_default(&"zzz",{|x| *x = *x+1},42);
-    assert_eq!(*trie.get(&"zzz").unwrap(),42);
+    trie.map_with_default(&"abcd",
+                          {
+                              |x| *x = *x + 1
+                          },
+                          42);
+    assert_eq!(*trie.get(&"abcd").unwrap(), 17 + 1);
+    trie.map_with_default(&"zzz",
+                          {
+                              |x| *x = *x + 1
+                          },
+                          42);
+    assert_eq!(*trie.get(&"zzz").unwrap(), 42);
 }
 
 #[test]
@@ -179,8 +185,10 @@ fn iter() {
 #[test]
 fn get_raw_descendant() {
     let trie = test_trie();
-    assert_eq!(trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()), Some(&19));
-    assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()), Some(&19));
+    assert_eq!(trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()),
+               Some(&19));
+    assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()),
+               Some(&19));
     assert!(trie.get_raw_descendant(&"acbg").is_none());
 }
 
@@ -277,4 +285,12 @@ fn child_subtrie_keys() {
         assert_eq!(*subsubtrie.get(&"abcdef").unwrap().unwrap(), 18);
         assert_eq!(*subsubtrie.get(&"abcdefgh").unwrap().unwrap(), 19);
     }
+}
+
+#[test]
+fn int_keys() {
+    let mut trie = Trie::new();
+    trie.insert(0x00ffu64, "asdf");
+    trie.insert(0xdeadbeefu64, "asdf");
+    assert!(trie.check_integrity());
 }

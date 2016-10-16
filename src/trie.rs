@@ -1,7 +1,9 @@
 use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
 use traversal::DescendantResult::*;
 
-impl<K, V> Trie<K, V> where K: TrieKey {
+impl<K, V> Trie<K, V>
+    where K: TrieKey
+{
     /// Create an empty Trie.
     pub fn new() -> Trie<K, V> {
         Trie {
@@ -112,7 +114,9 @@ impl<K, V> Trie<K, V> where K: TrieKey {
     /// Take a function `f` and apply it to the value stored at `key`.
     ///
     /// If no value is stored at `key`, store `default`.
-    pub fn map_with_default<F>(&mut self, key : K, f : F, default: V) where F: Fn(&mut V) {
+    pub fn map_with_default<F>(&mut self, key: K, f: F, default: V)
+        where F: Fn(&mut V)
+    {
         {
             if let Some(v) = self.get_mut(&key) {
                 f(v);

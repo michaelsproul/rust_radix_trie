@@ -19,7 +19,7 @@ impl Arbitrary for Key {
     fn arbitrary<G: Gen>(g: &mut G) -> Key {
         let len = g.gen::<usize>() % KEY_RUN_LEN;
         let mut key = Vec::with_capacity(len);
-        for _ in 0 .. len {
+        for _ in 0..len {
             key.push(g.gen::<u8>() % KEY_MAX_VAL);
         }
         Key(key)
@@ -33,7 +33,9 @@ impl Key {
         key
     }
 
-    fn len(&self) -> usize { self.0.len() }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl TrieKey for Key {
@@ -48,7 +50,7 @@ impl Arbitrary for RandomKeys {
         let mut keys = Vec::with_capacity(num_keys);
         keys.push(Key::arbitrary(g));
 
-        for _ in 0 .. num_keys {
+        for _ in 0..num_keys {
             match g.gen::<u8>() % 10 {
                 // Generate a new random key.
                 1 => keys.push(Key::arbitrary(g)),
@@ -76,10 +78,14 @@ fn insert_all_remove_all() {
                 return false;
             }
             length += 1;
-            if trie.len() != length { return false }
+            if trie.len() != length {
+                return false;
+            }
         }
 
-        if !trie.check_integrity() { return false }
+        if !trie.check_integrity() {
+            return false;
+        }
 
         for k in &keys {
             if trie.get(&k) != Some(&k.len()) {
@@ -89,10 +95,16 @@ fn insert_all_remove_all() {
                 return false;
             }
             length -= 1;
-            if trie.len() != length { return false }
-            if trie.get(&k).is_some() { return false }
+            if trie.len() != length {
+                return false;
+            }
+            if trie.get(&k).is_some() {
+                return false;
+            }
         }
-        if !trie.check_integrity() { return false }
+        if !trie.check_integrity() {
+            return false;
+        }
         true
     }
 
@@ -109,15 +121,21 @@ fn subtrie() {
         // Check node existence for inserted keys.
         for k in keys.iter().take(half) {
             match trie.subtrie(&k) {
-                Some(node) => if node.value() != Some(&k.len()) { return false },
-                None => return false
+                Some(node) => {
+                    if node.value() != Some(&k.len()) {
+                        return false;
+                    }
+                }
+                None => return false,
             }
         }
 
         // Check that nodes for non-inserted keys don't have values.
         for k in keys.iter().skip(half) {
             if let Some(node) = trie.subtrie(&k) {
-                if node.value().is_some() { return false }
+                if node.value().is_some() {
+                    return false;
+                }
             }
         }
 
@@ -150,7 +168,7 @@ fn keys_iter() {
 #[test]
 fn values_iter() {
     // Create a map of values to frequencies.
-    fn frequency_map<I: Iterator<Item=usize>>(values: I) -> HashMap<usize, u64> {
+    fn frequency_map<I: Iterator<Item = usize>>(values: I) -> HashMap<usize, u64> {
         let mut map = HashMap::new();
         for v in values {
             let current_val = map.entry(v).or_insert(0);

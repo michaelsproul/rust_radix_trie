@@ -15,17 +15,17 @@ impl <'a, K, V> SubTrie<'a, K, V> where K: TrieKey {
     }
 }
 
-fn subtrie_get<'a, K, V>(prefix: &NibbleVec, node: &'a TrieNode<K, V>, key: &K)
-    -> SubTrieResult<&'a V>
+fn subtrie_get<'a, K, V>(prefix: &NibbleVec,
+                         node: &'a TrieNode<K, V>,
+                         key: &K)
+                         -> SubTrieResult<&'a V>
     where K: TrieKey
 {
     let key_enc = key.encode();
     match match_keys(0, prefix, &key_enc) {
         KeyMatch::Full => Ok(node.value()),
-        KeyMatch::FirstPrefix => {
-            Ok(node.get(&stripped(key_enc, prefix)).and_then(TrieNode::value))
-        }
-        _ => Err(())
+        KeyMatch::FirstPrefix => Ok(node.get(&stripped(key_enc, prefix)).and_then(TrieNode::value)),
+        _ => Err(()),
     }
 }
 

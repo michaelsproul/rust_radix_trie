@@ -10,7 +10,9 @@ macro_rules! no_children {
     ])
 }
 
-impl<K, V> TrieNode<K, V> where K: TrieKey {
+impl<K, V> TrieNode<K, V>
+    where K: TrieKey
+{
     /// Create a value-less, child-less TrieNode.
     pub fn new() -> TrieNode<K, V> {
         TrieNode {
@@ -25,7 +27,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     pub fn with_key_value(key_fragments: NibbleVec, key: K, value: V) -> TrieNode<K, V> {
         TrieNode {
             key: key_fragments,
-            key_value: Some(Box::new(KeyValue { key: key, value: value })),
+            key_value: Some(Box::new(KeyValue {
+                key: key,
+                value: value,
+            })),
             children: no_children![],
             child_count: 0,
         }
@@ -94,7 +99,7 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Helper function for removing the single child of a node.
     pub fn take_only_child(&mut self) -> Box<TrieNode<K, V>> {
         debug_assert!(self.child_count == 1);
-        for i in 0 .. BRANCH_FACTOR {
+        for i in 0..BRANCH_FACTOR {
             if let Some(child) = self.take_child(i) {
                 return child;
             }
@@ -105,7 +110,10 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
     /// Set the key and value of a node, given that it currently lacks one.
     pub fn add_key_value(&mut self, key: K, value: V) {
         debug_assert!(self.key_value.is_none());
-        self.key_value = Some(Box::new(KeyValue { key: key, value: value }));
+        self.key_value = Some(Box::new(KeyValue {
+            key: key,
+            value: value,
+        }));
     }
 
     /// Move the value out of a node, whilst checking that its key is as expected.
@@ -154,14 +162,12 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
 
         // Insert the collected items below what is now an empty prefix node.
         let bucket = key.get(0) as usize;
-        self.children[bucket] = Some(Box::new(
-            TrieNode {
-                key: key,
-                key_value: key_value,
-                children: children,
-                child_count: child_count,
-            }
-        ));
+        self.children[bucket] = Some(Box::new(TrieNode {
+            key: key,
+            key_value: key_value,
+            children: children,
+            child_count: child_count,
+        }));
     }
 
     /// Check the integrity of a trie subtree (quite costly).
@@ -187,7 +193,9 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
         let child_count = self.children.iter().fold(0, |acc, e| acc + (e.is_some() as usize));
 
         if child_count != self.child_count {
-            println!("Child count error, recorded: {}, actual: {}", self.child_count, child_count);
+            println!("Child count error, recorded: {}, actual: {}",
+                     self.child_count,
+                     child_count);
             return (false, sub_tree_size);
         }
 
@@ -205,15 +213,15 @@ impl<K, V> TrieNode<K, V> where K: TrieKey {
                     return (false, sub_tree_size);
                 }
             }
-            None => ()
+            None => (),
         }
 
         // Recursively check children.
-        for i in 0 .. BRANCH_FACTOR {
+        for i in 0..BRANCH_FACTOR {
             if let Some(ref child) = self.children[i] {
                 match child.check_integrity_recursive(&trie_key) {
                     (false, _) => return (false, sub_tree_size),
-                    (true, child_size) => sub_tree_size += child_size
+                    (true, child_size) => sub_tree_size += child_size,
                 }
             }
         }
