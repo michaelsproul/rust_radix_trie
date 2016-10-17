@@ -39,6 +39,7 @@ Made by:
 * Andrew Smith ([@andrewcsmith](https://github.com/andrewcsmith))
 * Arthur Carcano ([@NougatRillettes](https://github.com/NougatRillettes))
 * Michael Sproul ([@michaelsproul](https://github.com/michaelsproul))
+* Robin Lambertz ([@roblabla](https://github.com/roblabla))
 * Sergey ([@Albibek](https://github.com/Albibek))
 
 # License
