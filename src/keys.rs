@@ -3,12 +3,19 @@ use endian_type::{LittleEndian, BigEndian};
 
 /// Trait for types which can be used to key a Radix Trie.
 ///
-/// Types that implement this trait should be convertible to a vector of bytes
-/// such that no two instances of the type convert to the same vector. This is essentially
-/// serialisation, and may be combined with some serialisation library in the future.
+/// Types that implement this trait should be convertible to a vector of half-bytes (nibbles)
+/// such that no two instances of the type convert to the same vector.
+/// To protect against faulty behaviour, the trie will **panic** if it finds two distinct keys
+/// of type `K` which encode to the same `NibbleVec`, so be careful!
 ///
-/// If a type fails to implement this trait correctly, the Radix Trie will panic upon
-/// encountering a conflict. Be careful!
+/// If you would like to implement this trait for your own type, you need to implement
+/// *either* `encode_bytes` or `encode`. You only need to implement one of the two.
+/// If you don't implement one, your code will **panic** as soon you use the trie.
+/// There is no performance penalty for implementing `encode_bytes` instead of `encode`,
+/// so it is preferred except in the case where you require half-byte precision.
+///
+/// Many standard types implement this trait already. Integer types are encoded *big-endian*
+/// by default but can be encoded little-endian using the `LittleEndian<T>` wrapper type.
 pub trait TrieKey: PartialEq + Eq {
     /// Encode a value as a vector of bytes.
     fn encode_bytes(&self) -> Vec<u8> {
@@ -35,6 +42,8 @@ pub enum KeyMatch {
 }
 
 /// Compare two Trie keys.
+///
+/// Compares `first[start_idx .. ]` to `second`, i.e. only looks at a slice of the first key.
 pub fn match_keys(start_idx: usize, first: &NibbleVec, second: &NibbleVec) -> KeyMatch {
     let first_len = first.len() - start_idx;
     let min_length = ::std::cmp::min(first_len, second.len());
