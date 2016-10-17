@@ -24,6 +24,8 @@ mod trie;
 mod subtrie;
 mod trie_node;
 mod trie_common;
+#[cfg(feature = "serde")]
+mod serde;
 
 #[cfg(test)]
 mod test;

@@ -1,4 +1,4 @@
-use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
+use {Trie, TrieCommon, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
 use traversal::DescendantResult::*;
 
 impl<K, V> Trie<K, V>
@@ -130,5 +130,15 @@ impl<K, V> Trie<K, V>
     pub fn check_integrity(&self) -> bool {
         let (ok, length) = self.node.check_integrity_recursive(&NibbleVec::new());
         ok && length == self.length
+    }
+}
+
+impl<K, V> PartialEq for Trie<K, V> where K: TrieKey, V: PartialEq {
+    fn eq(&self, other: &Trie<K, V>) -> bool {
+        if self.len() != other.len() { return false; }
+
+        self.iter().all(|(key, value)|
+            other.get(key).map_or(false, |v| *value == *v)
+        )
     }
 }

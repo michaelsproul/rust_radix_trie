@@ -16,8 +16,10 @@ keywords = ["trie", "patricia", "collection", "generic", "prefix"]
 
 nibble_vec = "0.0.3"
 "endian-type" = "0.1.2"
+serde = { version = "0.8", optional = true }
 
 [dev-dependencies]
 
 quickcheck = "0.2"
 rand = "0.3"
+serde_test = "0.8"
