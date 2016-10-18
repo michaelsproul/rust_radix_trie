@@ -305,3 +305,79 @@ fn from_iter() {
     assert_eq!(*trie.get(&"hello").unwrap(), 12);
     assert_eq!(trie.len(), 2);
 }
+
+#[test]
+fn test_get_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    assert_eq!(*trie.get("/boot").unwrap(), "dir");
+}
+
+#[test]
+fn test_get_mut_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    assert_eq!(*trie.get_mut("/boot").unwrap(), "dir");
+}
+
+#[test]
+fn test_remove_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    assert_eq!(trie.remove("/boot").unwrap(), "dir");
+}
+
+#[test]
+fn test_subtrie_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/bleh".to_string(), "ohi");
+    let subtrie = trie.subtrie("/boot").unwrap();
+}
+
+#[test]
+fn test_subtrie_mut_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/bleh".to_string(), "ohi");
+    let subtrie = trie.subtrie_mut("/boot").unwrap();
+    // TODO: Compare subtrie
+}
+
+#[test]
+fn test_get_ancestor_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/bleh".to_string(), "ohi");
+    let subtrie = trie.get_ancestor("/boot/lo").unwrap();
+}
+
+#[test]
+fn test_get_ancestor_value_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/bleh".to_string(), "ohi");
+    let subtrie = trie.get_ancestor_value("/boot/lo").unwrap();
+}
+
+#[test]
+fn test_get_raw_ancestor_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/bleh".to_string(), "ohi");
+    let subtrie = trie.get_raw_ancestor("/boot/lo");
+}
+
+#[test]
+fn test_get_raw_descendant_borrow() {
+    let mut trie = Trie::new();
+    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/bleh".to_string(), "ohi");
+    let subtrie = trie.get_raw_descendant("/boot/lo").unwrap();
+}
