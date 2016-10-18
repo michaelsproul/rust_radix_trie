@@ -1,5 +1,6 @@
 use {Trie, TrieCommon, TrieKey, SubTrie, SubTrieMut, NibbleVec};
 use trie_node::TrieNode;
+use std::borrow::Borrow;
 use traversal::DescendantResult::*;
 
 impl<K, V> Trie<K, V>
@@ -14,13 +15,21 @@ impl<K, V> Trie<K, V>
     }
 
     /// Fetch a reference to the given key's corresponding value, if any.
-    pub fn get(&self, key: &K) -> Option<&V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+        where K: Borrow<Q>, Q: TrieKey {
         let key_fragments = key.encode();
         self.node.get(&key_fragments).and_then(|t| t.value_checked(key))
     }
 
     /// Fetch a mutable reference to the given key's corresponding value, if any.
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
+        where K: Borrow<Q>, Q: TrieKey {
         let key_fragments = key.encode();
         self.node.get_mut(&key_fragments).and_then(|t| t.value_checked_mut(key))
     }
@@ -36,7 +45,12 @@ impl<K, V> Trie<K, V>
     }
 
     /// Remove the value associated with the given key.
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
+        where K: Borrow<Q>, Q: TrieKey
+    {
         let removed = self.node.remove(key);
         if removed.is_some() {
             self.length -= 1;
@@ -50,13 +64,21 @@ impl<K, V> Trie<K, V>
     }
 
     /// Fetch a reference to the subtrie for a given key.
-    pub fn subtrie<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn subtrie<'a, Q: ?Sized>(&'a self, key: &Q) -> Option<SubTrie<'a, K, V>>
+        where K: Borrow<Q>, Q: TrieKey {
         let key_fragments = key.encode();
         self.node.get(&key_fragments).map(|node| node.as_subtrie(key_fragments))
     }
 
     /// Fetch a mutable reference to the subtrie for a given key.
-    pub fn subtrie_mut<'a>(&'a mut self, key: &K) -> Option<SubTrieMut<'a, K, V>> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn subtrie_mut<'a, Q: ?Sized>(&'a mut self, key: &Q) -> Option<SubTrieMut<'a, K, V>>
+        where K: Borrow<Q>, Q: TrieKey {
         let key_fragments = key.encode();
         let length_ref = &mut self.length;
         self.node
@@ -71,7 +93,11 @@ impl<K, V> Trie<K, V>
     /// has a value.
     ///
     /// Invariant: `result.is_some() => result.key_value.is_some()`.
-    pub fn get_ancestor<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get_ancestor<'a, Q: ?Sized>(&'a self, key: &Q) -> Option<SubTrie<'a, K, V>>
+        where K: Borrow<Q>, Q: TrieKey {
         let mut key_fragments = key.encode();
         self.node.get_ancestor(&key_fragments).map(|(node, node_key_len)| {
             key_fragments.split(node_key_len);
@@ -82,11 +108,18 @@ impl<K, V> Trie<K, V>
     /// Fetch the closest ancestor *value* for a given key.
     ///
     /// See `get_ancestor` for precise semantics, this is just a shortcut.
-    pub fn get_ancestor_value(&self, key: &K) -> Option<&V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get_ancestor_value<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+        where K: Borrow<Q>, Q: TrieKey {
         self.get_ancestor(key).and_then(|t| t.node.value())
     }
 
-    pub fn get_raw_ancestor<'a>(&'a self, key: &K) -> SubTrie<'a, K, V> {
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get_raw_ancestor<'a, Q: ?Sized>(&'a self, key: &Q) -> SubTrie<'a, K, V>
+        where K: Borrow<Q>, Q: TrieKey {
         let mut nv = key.encode();
         let (ancestor_node, depth) = self.node.get_raw_ancestor(&nv);
         nv.split(depth);
@@ -96,7 +129,11 @@ impl<K, V> Trie<K, V>
     /// Fetch the closest descendant for a given key.
     ///
     /// If the key is in the trie, this is the same as `subtrie`.
-    pub fn get_raw_descendant<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get_raw_descendant<'a, Q: ?Sized>(&'a self, key: &Q) -> Option<SubTrie<'a, K, V>>
+        where K: Borrow<Q>, Q: TrieKey {
         let mut nv = key.encode();
         self.node.get_raw_descendant(&nv).map(|desc| {
             let (node, prefix) = match desc {

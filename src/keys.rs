@@ -62,7 +62,7 @@ pub fn match_keys(start_idx: usize, first: &NibbleVec, second: &NibbleVec) -> Ke
 }
 
 /// Check two keys for equality and panic if they differ.
-pub fn check_keys<K>(key1: &K, key2: &K)
+pub fn check_keys<K: ?Sized>(key1: &K, key2: &K)
     where K: TrieKey
 {
     if *key1 != *key2 {
@@ -86,7 +86,7 @@ impl TrieKey for Vec<u8> {
     }
 }
 
-impl<'a> TrieKey for &'a [u8] {
+impl TrieKey for [u8] {
     fn encode_bytes(&self) -> Vec<u8> {
         self.clone().to_vec()
     }
@@ -98,9 +98,21 @@ impl TrieKey for String {
     }
 }
 
-impl<'a> TrieKey for &'a str {
+impl TrieKey for str {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_bytes().encode_bytes()
+    }
+}
+
+impl<'a, T: ?Sized + TrieKey> TrieKey for &'a T {
+    fn encode_bytes(&self) -> Vec<u8> {
+        (**self).encode_bytes()
+    }
+}
+
+impl<'a, T: ?Sized + TrieKey> TrieKey for &'a mut T {
+    fn encode_bytes(&self) -> Vec<u8> {
+        (**self).encode_bytes()
     }
 }
 

@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use {SubTrie, SubTrieMut, NibbleVec, BRANCH_FACTOR};
 use keys::*;
 
@@ -75,17 +76,25 @@ impl<K, V> TrieNode<K, V>
     }
 
     /// Get the value whilst checking a key match.
-    pub fn value_checked(&self, key: &K) -> Option<&V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn value_checked<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+        where K: Borrow<Q>, Q: TrieKey {
         self.key_value.as_ref().map(|kv| {
-            check_keys(&kv.key, key);
+            check_keys(kv.key.borrow(), key);
             &kv.value
         })
     }
 
     /// Get a mutable value whilst checking a key match.
-    pub fn value_checked_mut(&mut self, key: &K) -> Option<&mut V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn value_checked_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
+        where K: Borrow<Q>, Q: TrieKey {
         self.key_value.as_mut().map(|kv| {
-            check_keys(&kv.key, key);
+            check_keys(kv.key.borrow(), key);
             &mut kv.value
         })
     }
@@ -141,9 +150,13 @@ impl<K, V> TrieNode<K, V>
 
     /// Move the value out of a node, whilst checking that its key is as expected.
     /// Can panic (see check_keys).
-    pub fn take_value(&mut self, key: &K) -> Option<V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn take_value<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
+        where K: Borrow<Q>, Q: TrieKey {
         self.key_value.take().map(|kv| {
-            check_keys(&kv.key, key);
+            check_keys(kv.key.borrow(), key);
             kv.value
         })
     }
