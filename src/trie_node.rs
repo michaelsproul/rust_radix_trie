@@ -1,5 +1,28 @@
-use {TrieNode, KeyValue, NibbleVec, BRANCH_FACTOR};
+use {SubTrie, SubTrieMut, NibbleVec, BRANCH_FACTOR};
 use keys::*;
+
+#[derive(Debug)]
+pub struct TrieNode<K, V> {
+    /// Key fragments/bits associated with this node, such that joining the keys from all
+    /// parent nodes and this node is equal to the bit-encoding of this node's key.
+    pub key: NibbleVec,
+
+    /// The key and value stored at this node.
+    pub key_value: Option<Box<KeyValue<K, V>>>,
+
+    /// The number of children which are Some rather than None.
+    pub child_count: usize,
+
+    /// The children of this node stored such that the first nibble of each child key
+    /// dictates the child's bucket.
+    pub children: [Option<Box<TrieNode<K, V>>>; BRANCH_FACTOR],
+}
+
+#[derive(Debug)]
+pub struct KeyValue<K, V> {
+    pub key: K,
+    pub value: V,
+}
 
 macro_rules! no_children {
     () => ([
@@ -168,6 +191,23 @@ impl<K, V> TrieNode<K, V>
             children: children,
             child_count: child_count,
         }));
+    }
+
+    pub fn as_subtrie<'a>(&'a self, prefix: NibbleVec) -> SubTrie<'a, K, V> {
+        SubTrie {
+            prefix: prefix,
+            node: self
+        }
+    }
+
+    pub fn as_subtrie_mut<'a>(&'a mut self, prefix: NibbleVec, length: &'a mut usize)
+        -> SubTrieMut<'a, K, V>
+    {
+        SubTrieMut {
+            prefix: prefix,
+            length: length,
+            node: self,
+        }
     }
 
     /// Check the integrity of a trie subtree (quite costly).

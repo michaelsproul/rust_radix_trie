@@ -1,4 +1,5 @@
-use {Trie, TrieNode, TrieKey, SubTrie, SubTrieMut};
+use {Trie, TrieKey, SubTrie, SubTrieMut};
+use trie_node::TrieNode;
 use iter::*;
 
 /// Common functionality available for tries and subtries.

@@ -14,6 +14,7 @@ extern crate rand;
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use trie_common::TrieCommon;
+use trie_node::TrieNode;
 
 #[macro_use]
 mod macros;
@@ -51,30 +52,6 @@ pub struct Trie<K, V> {
     length: usize,
     /// The main content of this trie.
     node: TrieNode<K, V>,
-}
-
-/// Internal trie node (avoid using explicitly).
-#[derive(Debug)]
-pub struct TrieNode<K, V> {
-    /// Key fragments/bits associated with this node, such that joining the keys from all
-    /// parent nodes and this node is equal to the bit-encoding of this node's key.
-    key: NibbleVec,
-
-    /// The key and value stored at this node.
-    key_value: Option<Box<KeyValue<K, V>>>,
-
-    /// The number of children which are Some rather than None.
-    child_count: usize,
-
-    /// The children of this node stored such that the first nibble of each child key
-    /// dictates the child's bucket.
-    children: [Option<Box<TrieNode<K, V>>>; BRANCH_FACTOR],
-}
-
-#[derive(Debug)]
-struct KeyValue<K, V> {
-    key: K,
-    value: V,
 }
 
 /// Immutable view of a sub-tree a larger trie.

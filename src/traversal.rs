@@ -1,6 +1,7 @@
 //! This module contains the core algorithms.
 
-use {TrieNode, TrieKey, NibbleVec};
+use {TrieKey, NibbleVec};
+use trie_node::TrieNode;
 use keys::{match_keys, KeyMatch};
 
 use self::DescendantResult::*;
