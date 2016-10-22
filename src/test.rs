@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::iter::FromIterator;
 use {Trie, TrieCommon};
 
 const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
@@ -293,4 +294,14 @@ fn int_keys() {
     trie.insert(0x00ffu64, "asdf");
     trie.insert(0xdeadbeefu64, "asdf");
     assert!(trie.check_integrity());
+}
+
+#[test]
+fn from_iter() {
+    let trie: Trie<&str, u32> = Trie::from_iter(vec![
+        ("test", 10), ("hello", 12)
+    ]);
+    assert_eq!(*trie.get(&"test").unwrap(), 10);
+    assert_eq!(*trie.get(&"hello").unwrap(), 12);
+    assert_eq!(trie.len(), 2);
 }
