@@ -3,7 +3,8 @@
 use std::slice;
 use std::iter::{Map, FilterMap, FromIterator};
 
-use {Trie, TrieNode, TrieKey, SubTrie, NibbleVec};
+use {Trie, TrieKey, SubTrie, NibbleVec};
+use trie_node::TrieNode;
 
 // MY EYES.
 type Child<K, V> = Box<TrieNode<K, V>>;
@@ -19,6 +20,7 @@ pub struct Iter<'a, K: 'a, V: 'a> {
 }
 
 impl<'a, K, V> Iter<'a, K, V> {
+    // TODO: make this private somehow (and same for the other iterators).
     pub fn new(root: &'a TrieNode<K, V>) -> Iter<'a, K, V> {
         Iter {
             root: root,

@@ -1,4 +1,5 @@
-use {Trie, TrieCommon, TrieNode, TrieKey, SubTrie, SubTrieMut, NibbleVec};
+use {Trie, TrieCommon, TrieKey, SubTrie, SubTrieMut, NibbleVec};
+use trie_node::TrieNode;
 use traversal::DescendantResult::*;
 
 impl<K, V> Trie<K, V>
@@ -51,7 +52,7 @@ impl<K, V> Trie<K, V>
     /// Fetch a reference to the subtrie for a given key.
     pub fn subtrie<'a>(&'a self, key: &K) -> Option<SubTrie<'a, K, V>> {
         let key_fragments = key.encode();
-        self.node.get(&key_fragments).map(|node| SubTrie::new(key_fragments, node))
+        self.node.get(&key_fragments).map(|node| node.as_subtrie(key_fragments))
     }
 
     /// Fetch a mutable reference to the subtrie for a given key.
@@ -60,7 +61,7 @@ impl<K, V> Trie<K, V>
         let length_ref = &mut self.length;
         self.node
             .get_mut(&key_fragments)
-            .map(move |node| SubTrieMut::new(key_fragments, length_ref, node))
+            .map(move |node| node.as_subtrie_mut(key_fragments, length_ref))
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
@@ -74,7 +75,7 @@ impl<K, V> Trie<K, V>
         let mut key_fragments = key.encode();
         self.node.get_ancestor(&key_fragments).map(|(node, node_key_len)| {
             key_fragments.split(node_key_len);
-            SubTrie::new(key_fragments, node)
+            node.as_subtrie(key_fragments)
         })
     }
 
@@ -89,7 +90,7 @@ impl<K, V> Trie<K, V>
         let mut nv = key.encode();
         let (ancestor_node, depth) = self.node.get_raw_ancestor(&nv);
         nv.split(depth);
-        SubTrie::new(nv, ancestor_node)
+        ancestor_node.as_subtrie(nv)
     }
 
     /// Fetch the closest descendant for a given key.
@@ -105,7 +106,7 @@ impl<K, V> Trie<K, V>
                 }
                 ExtendKey(node, extension) => (node, nv.join(extension)),
             };
-            SubTrie::new(prefix, node)
+            node.as_subtrie(prefix)
         })
     }
 
