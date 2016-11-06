@@ -28,8 +28,12 @@ impl Arbitrary for Key {
 
 impl Key {
     fn extend_random<G: Gen>(&self, g: &mut G) -> Key {
+        self.extend(Key::arbitrary(g))
+    }
+
+    fn extend(&self, other: Key) -> Key {
         let mut key = self.clone();
-        key.0.extend(Key::arbitrary(g).0);
+        key.0.extend(other.0);
         key
     }
 
@@ -143,6 +147,78 @@ fn subtrie() {
     }
 
     quickcheck(prop as fn(RandomKeys) -> bool);
+}
+
+// trie.subtrie(k1).get(k2) should be the same as trie.get(k2) if k1 is a prefix of k2.
+#[test]
+fn subtrie_get() {
+    fn prop(trie_keys: RandomKeys, k1: Key, k2: Key) -> bool {
+        let mut trie = length_trie(trie_keys.0);
+        trie.insert(k1.clone(), k1.len());
+
+        let subtrie = trie.subtrie(&k1).unwrap();
+
+        if k2.0.starts_with(&k1.0) {
+            subtrie.get(&k2).unwrap() == trie.get(&k2)
+        } else {
+            subtrie.get(&k2).is_err()
+        }
+    }
+
+    quickcheck(prop as fn(RandomKeys, Key, Key) -> bool);
+}
+
+#[test]
+fn subtrie_mut_get() {
+    fn prop(trie_keys: RandomKeys, k1: Key, k2: Key) -> bool {
+        let mut trie = length_trie(trie_keys.0);
+        trie.insert(k1.clone(), k1.len());
+
+        let subtrie = trie.subtrie_mut(&k1).unwrap();
+
+        if k2.0.starts_with(&k1.0) {
+            subtrie.get(&k2).is_ok()
+        } else {
+            subtrie.get(&k2).is_err()
+        }
+    }
+
+    quickcheck(prop as fn(RandomKeys, Key, Key) -> bool);
+}
+
+#[test]
+fn subtrie_insert() {
+    fn prop(
+        trie_keys: RandomKeys,
+        key_suffixes: RandomKeys,
+        k1: Key
+    ) -> bool {
+        let mut trie = length_trie(trie_keys.0);
+        trie.insert(k1.clone(), k1.len());
+
+        {
+            let mut subtrie = trie.subtrie_mut(&k1).unwrap();
+
+            let insert_keys = key_suffixes.0.into_iter()
+                .map(|x| k1.extend(x))
+                .collect::<HashSet<_>>();
+
+            for k in insert_keys.iter() {
+                assert!(subtrie.insert(k.clone(), k.len()).is_ok());
+            }
+
+            for k in insert_keys.iter() {
+                match subtrie.get(k) {
+                    Ok(Some(_)) => (),
+                    _ => return false
+                }
+            }
+        }
+
+        trie.check_integrity()
+    }
+
+    quickcheck(prop as fn(RandomKeys, RandomKeys, Key) -> bool);
 }
 
 // Construct a trie from a set of keys, with each key mapped to its length.
