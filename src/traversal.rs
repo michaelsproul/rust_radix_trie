@@ -1,5 +1,6 @@
 //! This module contains the core algorithms.
 
+use std::borrow::Borrow;
 use {TrieKey, NibbleVec};
 use trie_node::TrieNode;
 use keys::{match_keys, KeyMatch};
@@ -21,7 +22,8 @@ impl<K, V> TrieNode<K, V>
         iterative_insert(self, key, value, nv)
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
+        where K: Borrow<Q>, Q: TrieKey {
         recursive_remove(self, key)
     }
 
@@ -134,8 +136,8 @@ fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>,
 }
 
 // TODO: clean this up and make it iterative.
-fn recursive_remove<K, V>(trie: &mut TrieNode<K, V>, key: &K) -> Option<V>
-    where K: TrieKey
+fn recursive_remove<K, Q: ?Sized, V>(trie: &mut TrieNode<K, V>, key: &Q) -> Option<V>
+    where K: TrieKey, K: Borrow<Q>, Q: TrieKey
 {
     let nv = key.encode();
 
@@ -183,14 +185,14 @@ fn get_merge_child<K, V>(trie: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>>
 }
 
 // Tail-recursive remove function used by `recursive_remove`.
-fn rec_remove<K, V>(parent: &mut TrieNode<K, V>,
+fn rec_remove<K, Q: ?Sized, V>(parent: &mut TrieNode<K, V>,
                     mut middle: Box<TrieNode<K, V>>,
                     prev_bucket: usize,
-                    key: &K,
+                    key: &Q,
                     depth: usize,
                     nv: &NibbleVec)
                     -> Option<V>
-    where K: TrieKey
+    where K: TrieKey, K: Borrow<Q>, Q: TrieKey
 {
     let bucket = nv.get(depth) as usize;
 

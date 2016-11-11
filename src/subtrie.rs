@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use {SubTrie, SubTrieMut, SubTrieResult, NibbleVec};
 use trie_node::TrieNode;
 use keys::*;
@@ -6,16 +7,20 @@ impl<'a, K, V> SubTrie<'a, K, V>
     where K: TrieKey
 {
     /// Look up the value for the given key, which should be an extension of this subtrie's key.
-    pub fn get(&self, key: &K) -> SubTrieResult<&V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get<Q: ?Sized>(&self, key: &Q) -> SubTrieResult<&V>
+        where K: Borrow<Q>, Q: TrieKey {
         subtrie_get(&self.prefix, self.node, key)
     }
 }
 
-fn subtrie_get<'a, K, V>(prefix: &NibbleVec,
+fn subtrie_get<'a, K, Q: ?Sized, V>(prefix: &NibbleVec,
                          node: &'a TrieNode<K, V>,
-                         key: &K)
+                         key: &Q)
                          -> SubTrieResult<&'a V>
-    where K: TrieKey
+    where K: TrieKey, K: Borrow<Q>, Q: TrieKey
 {
     let key_enc = key.encode();
     match match_keys(0, prefix, &key_enc) {
@@ -34,7 +39,11 @@ impl<'a, K, V> SubTrieMut<'a, K, V>
     }
 
     /// Look up the value for the given key, which should be an extension of this subtrie's key.
-    pub fn get(&self, key: &K) -> SubTrieResult<&V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn get<Q: ?Sized>(&self, key: &Q) -> SubTrieResult<&V>
+        where K: Borrow<Q>, Q: TrieKey {
         subtrie_get(&self.prefix, &*self.node, key)
     }
 
@@ -57,7 +66,11 @@ impl<'a, K, V> SubTrieMut<'a, K, V>
     }
 
     /// Remove a value from this subtrie. The key should be an extension of this subtrie's key.
-    pub fn remove(&mut self, key: &K) -> SubTrieResult<V> {
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type
+    pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> SubTrieResult<V>
+        where K: Borrow<Q>, Q: TrieKey {
         let key_enc = key.encode();
         let removed = match match_keys(0, &self.prefix, &key_enc) {
             KeyMatch::Full => self.node.take_value(key),
