@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use {Trie, TrieCommon};
+use keys::TrieKey;
 
 const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
                                              ("abcdef", 18),
@@ -174,6 +175,18 @@ fn raw_ancestor() {
     assert_eq!(anc.len(), 2);
 }
 
+// Check that the subtrie prefix is correct for raw_ancestor.
+#[test]
+fn raw_ancestor_prefix() {
+    let mut t = Trie::new();
+
+    t.insert("abac", ());
+    t.insert("abaz", ());
+
+    let anc = t.get_raw_ancestor(&"aba");
+    assert_eq!(anc.prefix, "aba".encode());
+}
+
 #[test]
 fn iter() {
     type Set = HashSet<(&'static str, u32)>;
@@ -191,6 +204,18 @@ fn get_raw_descendant() {
     assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()),
                Some(&19));
     assert!(trie.get_raw_descendant(&"acbg").is_none());
+}
+
+#[test]
+fn raw_descendant_prefix() {
+    let mut t = Trie::new();
+
+    t.insert("abczzzz", ());
+    t.insert("abcaaaa", ());
+
+    assert_eq!(t.get_raw_descendant(&"a").unwrap().prefix, "abc".encode());
+    assert_eq!(t.get_raw_descendant(&"abc").unwrap().prefix, "abc".encode());
+    assert_eq!(t.get_raw_descendant(&"abca").unwrap().prefix, "abcaaaa".encode());
 }
 
 #[test]
@@ -273,6 +298,7 @@ fn ancestor_key() {
     let trie = test_trie();
     let subtrie = trie.get_ancestor(&"abcde").unwrap();
     assert_eq!(*subtrie.key().unwrap(), "abcd");
+    assert_eq!(subtrie.prefix, "abcd".encode());
     assert_eq!(*subtrie.get(&"abcdef").unwrap().unwrap(), 18);
     assert_eq!(*subtrie.get(&"abcdefgh").unwrap().unwrap(), 19);
 }

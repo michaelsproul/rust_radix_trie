@@ -314,16 +314,18 @@ fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>,
     }
 }
 
+// Type used to propogate subtrie construction instructions to the top-level `get_raw_descendant`
+// method.
 pub enum DescendantResult<'a, K: 'a, V: 'a> {
-    ChompKey(&'a TrieNode<K, V>, usize),
-    ExtendKey(&'a TrieNode<K, V>, &'a NibbleVec),
+    NoModification(&'a TrieNode<K, V>),
+    ExtendKey(&'a TrieNode<K, V>, usize, &'a NibbleVec),
 }
 
 fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>,
                                 nv: &NibbleVec)
                                 -> Option<DescendantResult<'a, K, V>> {
     if nv.len() == 0 {
-        return Some(ChompKey(trie, 0));
+        return Some(NoModification(trie));
     }
 
     let mut prev = trie;
@@ -335,10 +337,10 @@ fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>,
         if let Some(ref child) = current.children[bucket] {
             match match_keys(depth, &nv, &child.key) {
                 KeyMatch::Full => {
-                    return Some(ChompKey(child, depth + child.key.len()));
+                    return Some(NoModification(child));
                 }
                 KeyMatch::FirstPrefix => {
-                    return Some(ExtendKey(child, &child.key));
+                    return Some(ExtendKey(child, depth, &child.key));
                 }
                 KeyMatch::SecondPrefix => {
                     depth += child.key.len();

@@ -100,11 +100,11 @@ impl<K, V> Trie<K, V>
         let mut nv = key.encode();
         self.node.get_raw_descendant(&nv).map(|desc| {
             let (node, prefix) = match desc {
-                ChompKey(node, depth) => {
+                NoModification(node) => (node, nv),
+                ExtendKey(node, depth, extension) => {
                     nv.split(depth);
-                    (node, nv)
+                    (node, nv.join(extension))
                 }
-                ExtendKey(node, extension) => (node, nv.join(extension)),
             };
             node.as_subtrie(prefix)
         })
