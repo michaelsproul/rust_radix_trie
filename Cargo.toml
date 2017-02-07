@@ -8,7 +8,7 @@ license = "MIT"
 authors = ["Michael Sproul <micsproul@gmail.com>"]
 
 repository = "https://github.com/michaelsproul/rust_radix_trie"
-documentation = "https://michaelsproul.github.io/rust_radix_trie/"
+documentation = "https://docs.rs/radix_trie/"
 
 keywords = ["trie", "patricia", "collection", "generic", "prefix"]
 
