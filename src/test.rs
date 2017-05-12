@@ -360,6 +360,7 @@ fn test_subtrie_borrow() {
     trie.insert("/boot/lol".to_string(), "dir");
     trie.insert("/bleh".to_string(), "ohi");
     let subtrie = trie.subtrie("/boot").unwrap();
+    assert_eq!(*subtrie.value().unwrap(), "dir");
 }
 
 #[test]
@@ -369,41 +370,45 @@ fn test_subtrie_mut_borrow() {
     trie.insert("/boot/lol".to_string(), "dir");
     trie.insert("/bleh".to_string(), "ohi");
     let subtrie = trie.subtrie_mut("/boot").unwrap();
-    // TODO: Compare subtrie
+    assert_eq!(*subtrie.value().unwrap(), "dir");
 }
 
 #[test]
 fn test_get_ancestor_borrow() {
     let mut trie = Trie::new();
-    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot".to_string(), "ancestor");
     trie.insert("/boot/lol".to_string(), "dir");
     trie.insert("/bleh".to_string(), "ohi");
     let subtrie = trie.get_ancestor("/boot/lo").unwrap();
+    assert_eq!(*subtrie.value().unwrap(), "ancestor");
 }
 
 #[test]
 fn test_get_ancestor_value_borrow() {
     let mut trie = Trie::new();
-    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot".to_string(), "ancestor");
     trie.insert("/boot/lol".to_string(), "dir");
     trie.insert("/bleh".to_string(), "ohi");
-    let subtrie = trie.get_ancestor_value("/boot/lo").unwrap();
+    let ancestor_val = trie.get_ancestor_value("/boot/lo").unwrap();
+    assert_eq!(*ancestor_val, "ancestor");
 }
 
 #[test]
 fn test_get_raw_ancestor_borrow() {
     let mut trie = Trie::new();
-    trie.insert("/boot".to_string(), "dir");
+    trie.insert("/boot".to_string(), "boot");
     trie.insert("/boot/lol".to_string(), "dir");
     trie.insert("/bleh".to_string(), "ohi");
     let subtrie = trie.get_raw_ancestor("/boot/lo");
+    assert_eq!(*subtrie.value().unwrap(), "boot");
 }
 
 #[test]
 fn test_get_raw_descendant_borrow() {
     let mut trie = Trie::new();
     trie.insert("/boot".to_string(), "dir");
-    trie.insert("/boot/lol".to_string(), "dir");
+    trie.insert("/boot/lol".to_string(), "lol");
     trie.insert("/bleh".to_string(), "ohi");
     let subtrie = trie.get_raw_descendant("/boot/lo").unwrap();
+    assert_eq!(*subtrie.value().unwrap(), "lol");
 }
