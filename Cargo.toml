@@ -1,6 +1,6 @@
 [package]
 name = "radix_trie"
-version = "0.1.0"
+version = "0.1.1"
 description = "Generic radix trie data-structure."
 
 license = "MIT"
@@ -23,4 +23,4 @@ rand = "0.3"
 serde_test = "1.0"
 
 [badges]
-travis-ci = { repository = "https://github.com/michaelsproul/rust_radix_trie" }
+travis-ci = { repository = "michaelsproul/rust_radix_trie" }
