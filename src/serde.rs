@@ -1,22 +1,23 @@
 extern crate serde;
 
 use super::{Trie, TrieKey, TrieCommon};
-use self::serde::{Serialize, Serializer, Deserialize, Deserializer, de, Error};
+use self::serde::{Serialize, Serializer, Deserialize, Deserializer, de};
+use self::serde::ser::SerializeMap;
 use std::marker::PhantomData;
+use std::fmt::{self, Formatter};
 
 impl<K, V> Serialize for Trie<K, V>
     where K: Serialize + TrieKey,
           V: Serialize
 {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        let mut state = try!(serializer.serialize_map(Some(self.len())));
+        let mut map = serializer.serialize_map(Some(self.len()))?;
         for (k, v) in self.iter() {
-            try!(serializer.serialize_map_key(&mut state, k));
-            try!(serializer.serialize_map_value(&mut state, v));
+            map.serialize_entry(k, v)?;
         }
-        serializer.serialize_map_end(state)
+        map.end()
     }
 }
 
@@ -31,38 +32,41 @@ impl<K, V> TrieVisitor<K, V> {
     }
 }
 
-impl<K, V> de::Visitor for TrieVisitor<K, V>
-    where K: Deserialize + Clone + Eq + PartialEq + TrieKey,
-          V: Deserialize
+impl<'a, K, V> de::Visitor<'a> for TrieVisitor<K, V>
+    where K: Deserialize<'a> + Clone + Eq + PartialEq + TrieKey,
+          V: Deserialize<'a>
 {
     type Value = Trie<K, V>;
 
-    fn visit_map<M>(&mut self, mut visitor: M) -> Result<Self::Value, M::Error>
-        where M: de::MapVisitor
+    fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+        write!(formatter, "a serialized trie")
+    }
+
+    fn visit_map<M>(self, mut visitor: M) -> Result<Self::Value, M::Error>
+        where M: de::MapAccess<'a>
     {
         let mut values = Trie::new();
 
-        while let Some((key, value)) = try!(visitor.visit()) {
+        while let Some((key, value)) = visitor.next_entry()? {
             values.insert(key, value);
         }
 
-        try!(visitor.end());
         Ok(values)
     }
 
-    fn visit_unit<E>(&mut self) -> Result<Self::Value, E>
-        where E: Error
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where E: de::Error
     {
         Ok(Trie::new())
     }
 }
 
-impl<K, V> Deserialize for Trie<K, V>
-    where K: Deserialize + Clone + Eq + PartialEq + TrieKey,
-          V: Deserialize
+impl<'a, K, V> Deserialize<'a> for Trie<K, V>
+    where K: Deserialize<'a> + Clone + Eq + PartialEq + TrieKey,
+          V: Deserialize<'a>
 {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'a>
     {
         // Instantiate our Visitor and ask the Deserializer to drive
         // it over the input data, resulting in an instance of MyMap.
@@ -110,42 +114,36 @@ mod test {
 
     tests_ser! {
         test_ser_empty_trie => Trie::<&str, isize>::new() => &[
-            Token::MapStart(Some(0)),
+            Token::Map { len: Some(0) },
             Token::MapEnd,
         ],
         test_ser_single_element_trie => trie!["1" => 2] => &[
-            Token::MapStart(Some(1)),
-            Token::MapSep,
+            Token::Map { len: Some(1) },
+
             Token::Str("1"),
             Token::I32(2),
             Token::MapEnd,
         ],
         test_ser_multiple_element_trie => trie!["1" => 2, "3" => 4] => &[
-            Token::MapStart(Some(2)),
-            Token::MapSep,
+            Token::Map { len: Some(2) },
             Token::Str("1"),
             Token::I32(2),
 
-            Token::MapSep,
             Token::Str("3"),
             Token::I32(4),
             Token::MapEnd,
         ],
         test_ser_deep_trie => trie!["1" => trie![], "2" => trie!["3" => 4, "5" => 6]] => &[
-            Token::MapStart(Some(2)),
-            Token::MapSep,
+            Token::Map { len: Some(2) },
             Token::Str("1"),
-            Token::MapStart(Some(0)),
+            Token::Map { len: Some(0) },
             Token::MapEnd,
 
-            Token::MapSep,
             Token::Str("2"),
-            Token::MapStart(Some(2)),
-            Token::MapSep,
+            Token::Map { len: Some(2) },
             Token::Str("3"),
             Token::I32(4),
 
-            Token::MapSep,
             Token::Str("5"),
             Token::I32(6),
             Token::MapEnd,
@@ -158,53 +156,49 @@ mod test {
             Token::Unit,
         ],
         test_de_empty_trie2 => Trie::<String, isize>::new() => &[
-            Token::MapStart(Some(0)),
+            Token::Map { len: Some(0) },
             Token::MapEnd,
         ],
         test_de_single_element_trie => trie!["1".to_string() => 2] => &[
-            Token::MapStart(Some(1)),
-                Token::MapSep,
+            Token::Map { len: Some(1) },
                 Token::Str("1"),
                 Token::I32(2),
             Token::MapEnd,
         ],
         test_de_multiple_element_trie => trie!["1".to_string()  => 2, "3".to_string()  => 4] => &[
-            Token::MapStart(Some(2)),
-                Token::MapSep,
+            Token::Map { len: Some(2) },
                 Token::Str("1"),
                 Token::I32(2),
 
-                Token::MapSep,
                 Token::Str("3"),
                 Token::I32(4),
             Token::MapEnd,
         ],
         test_de_deep_trie => trie!["1".to_string()  => trie![], "2".to_string()  => trie!["3".to_string()  => 4, "5".to_string()  => 6]] => &[
-            Token::MapStart(Some(2)),
-                Token::MapSep,
+            Token::Map { len: Some(2) },
                 Token::Str("1"),
-                Token::MapStart(Some(0)),
+                Token::Map { len: Some(0) },
                 Token::MapEnd,
 
-                Token::MapSep,
                 Token::Str("2"),
-                Token::MapStart(Some(2)),
-                    Token::MapSep,
+                Token::Map { len: Some(2) },
                     Token::Str("3"),
                     Token::I32(4),
 
-                    Token::MapSep,
                     Token::Str("5"),
                     Token::I32(6),
                 Token::MapEnd,
             Token::MapEnd,
         ],
         test_de_empty_trie3 => Trie::<String, isize>::new() => &[
-            Token::UnitStruct("Anything"),
+            Token::UnitStruct { name: "Anything" },
         ],
         test_de_empty_trie4 => Trie::<String, isize>::new() => &[
-            Token::StructStart("Anything", 0),
-            Token::MapEnd,
+            Token::Struct {
+                name: "Anything",
+                len: 0,
+            },
+            Token::StructEnd,
         ],
     }
 }
