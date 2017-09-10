@@ -28,7 +28,7 @@ Just add `radix_trie` to the dependencies section of your `Cargo.toml`, like so:
 
 ```toml
 [dependencies]
-radix_trie = "^0.0"
+radix_trie = "*"
 ```
 
 # Contributors

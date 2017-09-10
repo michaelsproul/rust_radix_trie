@@ -8,6 +8,7 @@ authors = ["Michael Sproul <micsproul@gmail.com>"]
 
 repository = "https://github.com/michaelsproul/rust_radix_trie"
 documentation = "https://docs.rs/radix_trie/"
+readme = "README.md"
 
 keywords = ["trie", "patricia", "collection", "generic", "prefix"]
 categories = ["data-structures", "text-processing"]
