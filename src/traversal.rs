@@ -81,11 +81,11 @@ macro_rules! get_func {
 get_func!(name: iterative_get, trie_type: &'a TrieNode<K, V>, mutability: );
 get_func!(name: iterative_get_mut, trie_type: &'a mut TrieNode<K, V>, mutability: mut);
 
-fn iterative_insert<'a, K, V>(trie: &'a mut TrieNode<K, V>,
-                              key: K,
-                              value: V,
-                              mut nv: NibbleVec)
-                              -> Option<V>
+fn iterative_insert<K, V>(trie: &mut TrieNode<K, V>,
+                          key: K,
+                          value: V,
+                          mut nv: NibbleVec)
+                          -> Option<V>
     where K: TrieKey
 {
     if nv.len() == 0 {

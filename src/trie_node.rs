@@ -207,7 +207,7 @@ impl<K, V> TrieNode<K, V>
         }));
     }
 
-    pub fn as_subtrie<'a>(&'a self, prefix: NibbleVec) -> SubTrie<'a, K, V> {
+    pub fn as_subtrie(&self, prefix: NibbleVec) -> SubTrie<K, V> {
         SubTrie {
             prefix: prefix,
             node: self

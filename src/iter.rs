@@ -108,8 +108,8 @@ impl<'a, K, V> Iterator for Children<'a, K, V> {
 
 impl<K, V> TrieNode<K, V> {
     /// Helper function to get all the non-empty children of a node.
-    fn child_iter<'a>(&'a self) -> ChildIter<'a, K, V> {
-        fn id<'b, K, V>(x: &'b Option<Child<K, V>>) -> Option<&'b Child<K, V>> {
+    fn child_iter(&self) -> ChildIter<K, V> {
+        fn id<K, V>(x: &Option<Child<K, V>>) -> Option<&Child<K, V>> {
             x.as_ref()
         }
 
@@ -117,7 +117,7 @@ impl<K, V> TrieNode<K, V> {
     }
 
     /// Get the key and value of a node as a pair.
-    fn kv_as_pair<'a>(&'a self) -> Option<(&'a K, &'a V)> {
+    fn kv_as_pair(&self) -> Option<(&K, &V)> {
         self.key_value.as_ref().map(|kv| (&kv.key, &kv.value))
     }
 }
