@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::default::Default;
 use {SubTrie, SubTrieMut, NibbleVec, BRANCH_FACTOR};
 use keys::*;
 
@@ -104,7 +105,7 @@ impl<K, V> TrieNode<K, V>
         let mut size = if self.key_value.is_some() { 1 } else { 0 };
 
         for child in &self.children {
-            if let &Some(ref child) = child {
+            if let Some(ref child) = *child {
                 // TODO: could unroll this recursion
                 size += child.compute_size();
             }
@@ -130,7 +131,7 @@ impl<K, V> TrieNode<K, V>
 
     /// Helper function for removing the single child of a node.
     pub fn take_only_child(&mut self) -> Box<TrieNode<K, V>> {
-        debug_assert!(self.child_count == 1);
+        debug_assert_eq!(self.child_count, 1);
         for i in 0..BRANCH_FACTOR {
             if let Some(child) = self.take_child(i) {
                 return child;
@@ -256,17 +257,14 @@ impl<K, V> TrieNode<K, V>
         let trie_key = prefix.clone().join(&self.key);
 
         // Account for this node in the size check, and check its key.
-        match self.key_value {
-            Some(ref kv) => {
-                sub_tree_size += 1;
+        if let Some(ref kv) = self.key_value {
+            sub_tree_size += 1;
 
-                let actual_key = kv.key.encode();
+            let actual_key = kv.key.encode();
 
-                if trie_key != actual_key {
-                    return (false, sub_tree_size);
-                }
+            if trie_key != actual_key {
+                return (false, sub_tree_size);
             }
-            None => (),
         }
 
         // Recursively check children.
@@ -280,5 +278,11 @@ impl<K, V> TrieNode<K, V>
         }
 
         (true, sub_tree_size)
+    }
+}
+
+impl<K: TrieKey, V> Default for TrieNode<K, V> {
+    fn default() -> Self {
+        Self::new()
     }
 }

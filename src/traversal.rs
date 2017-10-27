@@ -255,11 +255,11 @@ fn get_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>,
         let bucket = nv.get(depth) as usize;
         let current = prev;
         if let Some(ref child) = current.children[bucket] {
-            match match_keys(depth, &nv, &child.key) {
+            match match_keys(depth, nv, &child.key) {
                 KeyMatch::Full => {
                     return child.as_value_node()
                         .map(|node| (node, depth + node.key.len()))
-                        .or(ancestor.map(|anc| (anc, depth)));
+                        .or_else(|| ancestor.map(|anc| (anc, depth)));
                 }
                 KeyMatch::FirstPrefix |
                 KeyMatch::Partial(_) => {
@@ -296,7 +296,7 @@ fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>,
         let bucket = nv.get(depth) as usize;
         let current = prev;
         if let Some(ref child) = current.children[bucket] {
-            match match_keys(depth, &nv, &child.key) {
+            match match_keys(depth, nv, &child.key) {
                 KeyMatch::Full => {
                     return (child, depth + child.key.len());
                 }
@@ -337,7 +337,7 @@ fn get_raw_descendant<'a, K, V>(trie: &'a TrieNode<K, V>,
         let bucket = nv.get(depth) as usize;
         let current = prev;
         if let Some(ref child) = current.children[bucket] {
-            match match_keys(depth, &nv, &child.key) {
+            match match_keys(depth, nv, &child.key) {
                 KeyMatch::Full => {
                     return Some(NoModification(child));
                 }

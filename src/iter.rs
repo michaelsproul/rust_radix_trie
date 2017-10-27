@@ -100,7 +100,7 @@ impl<'a, K, V> Iterator for Children<'a, K, V> {
         self.inner.next().map(|node| {
             SubTrie {
                 prefix: self.prefix.clone().join(&node.key),
-                node: &node,
+                node: node,
             }
         })
     }
@@ -146,7 +146,7 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
             let action = match self.stack.last_mut() {
                 Some(stack_top) => {
                     match stack_top.next() {
-                        Some(child) => Push(&child),
+                        Some(child) => Push(child),
                         None => Pop,
                     }
                 }
