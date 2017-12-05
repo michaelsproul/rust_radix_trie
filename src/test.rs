@@ -37,6 +37,17 @@ fn subtrie_nonexistant() {
 }
 
 #[test]
+fn unicode() {
+    let mut trie = Trie::new();
+    trie.insert("bär", 1);
+    trie.insert("bären", 2);
+
+    assert_eq!(*trie.get("bär").unwrap(), 1);
+    let values = trie.get_raw_descendant("bä").unwrap().values().collect::<HashSet<_>>();
+    assert_eq!([1,2].iter().collect::<HashSet<_>>(), values);
+}
+
+#[test]
 fn subtrie() {
     let mut trie = Trie::new();
     trie.insert("hello", 55);
