@@ -423,3 +423,20 @@ fn test_get_raw_descendant_borrow() {
     let subtrie = trie.get_raw_descendant("/boot/lo").unwrap();
     assert_eq!(*subtrie.value().unwrap(), "lol");
 }
+
+#[test]
+fn test_prefix() {
+    let mut t = Trie::<u8, ()>::new();
+    t.insert(0xf1, ());
+    t.insert(0xf2, ());
+    println!("{:#?}", t);
+    assert_eq!(t.prefix(), [].as_ref());
+    let first = t.children().next().unwrap();
+    assert_eq!(first.prefix(), [0xf].as_ref());
+    let mut c = first.children();
+    let second = c.next().unwrap();
+    let third = c.next().unwrap();
+    assert!(c.next().is_none());
+    assert_eq!(second.prefix(), [0x1].as_ref());
+    assert_eq!(third.prefix(), [0x2].as_ref());
+}
