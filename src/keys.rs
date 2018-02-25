@@ -72,7 +72,7 @@ pub fn check_keys<K: ?Sized>(key1: &K, key2: &K)
     }
 }
 
-/// --- TrieKey Implementations for standard types --- ///
+// --- TrieKey Implementations for standard types --- ///
 
 // This blanket implementation goes into play when specialization is stabilized
 // impl<T> TrieKey for T where T: Into<Vec<u8>> + Clone + Eq + PartialEq {
@@ -90,7 +90,7 @@ impl TrieKey for Vec<u8> {
 
 impl TrieKey for [u8] {
     fn encode_bytes(&self) -> Vec<u8> {
-        self.clone().to_vec()
+        self.to_vec()
     }
 }
 
@@ -122,7 +122,7 @@ impl TrieKey for i8 {
     fn encode_bytes(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::with_capacity(1);
         v.push(*self as u8);
-        return v;
+        v
     }
 }
 
@@ -130,7 +130,7 @@ impl TrieKey for u8 {
     fn encode_bytes(&self) -> Vec<u8> {
         let mut v: Vec<u8> = Vec::with_capacity(1);
         v.push(*self);
-        return v;
+        v
     }
 }
 

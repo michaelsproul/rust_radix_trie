@@ -1,4 +1,4 @@
-use {Trie, TrieKey, SubTrie, SubTrieMut};
+use {NibbleVec, Trie, TrieKey, SubTrie, SubTrieMut};
 use trie_node::TrieNode;
 use iter::*;
 
@@ -47,6 +47,11 @@ pub trait TrieCommon<'a, K: 'a, V: 'a>: ContainsTrieNode<'a, K, V>
 
     /// Return an iterator over the child subtries of this node.
     fn children(self) -> Children<'a, K, V>;
+
+    /// Get the prefix of this node.
+    fn prefix(self) -> &'a NibbleVec {
+        &self.trie_node().key
+    }
 }
 
 /// Helper trait for Trie/SubTrie/SubTrieMut, which all contain a trie node.

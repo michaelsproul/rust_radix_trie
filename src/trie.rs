@@ -180,3 +180,9 @@ impl<K, V> PartialEq for Trie<K, V> where K: TrieKey, V: PartialEq {
         )
     }
 }
+
+impl<K: TrieKey, V> Default for Trie<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
