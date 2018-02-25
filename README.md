@@ -40,10 +40,12 @@ Made by:
 * Michael Sproul ([@michaelsproul](https://github.com/michaelsproul))
 * Robin Lambertz ([@roblabla](https://github.com/roblabla))
 * Sergey ([@Albibek](https://github.com/Albibek))
+* Stuart Hinson ([@stuarth](https://github.com/stuarth))
+* Vinzent Steinberg ([@vks](https://github.com/vks))
 
 # License
 
-MIT License. Copyright © Michael Sproul and contributors 2016.
+MIT License. Copyright © Michael Sproul and contributors 2015-2018.
 
 [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
 [seq-trie]: https://github.com/michaelsproul/rust_sequence_trie
