@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 use {Trie, TrieCommon};
 use keys::TrieKey;
+use c_ffi::*;
+use std::ffi::{CStr,CString};
 
 const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
                                              ("abcdef", 18),
@@ -439,4 +441,17 @@ fn test_prefix() {
     assert!(c.next().is_none());
     assert_eq!(second.prefix(), [0x1].as_ref());
     assert_eq!(third.prefix(), [0x2].as_ref());
+}
+
+#[test]
+fn test_c_ffi_e2e(){
+    let t = radix_trie_create();
+    //let key = CString::new("key1").unwrap().as_ptr();
+    radix_trie_insert(t,  CString::new("key1").unwrap().as_ptr(), 1);
+    radix_trie_insert(t, CString::new("key2").unwrap().as_ptr(), 2);
+
+    let len = radix_trie_len(t);
+    assert_eq!(len, 2);
+
+    radix_trie_free(t);
 }

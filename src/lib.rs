@@ -11,6 +11,8 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
 
+extern crate libc;
+
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use trie_common::TrieCommon;
@@ -32,6 +34,9 @@ mod serde;
 mod test;
 #[cfg(test)]
 mod qc_test;
+
+mod c_ffi;
+pub use c_ffi::*;
 
 const BRANCH_FACTOR: usize = 16;
 
