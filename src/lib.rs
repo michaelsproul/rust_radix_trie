@@ -2,6 +2,7 @@
 //!
 //! To get started, see the docs for `Trie` below.
 
+#![deny(warnings)]
 // #![warn(missing_docs)]
 
 extern crate nibble_vec;
