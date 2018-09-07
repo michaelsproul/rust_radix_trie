@@ -2,7 +2,10 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 use {Trie, TrieCommon};
 use keys::TrieKey;
+
+#[cfg(feature = "cffi")]
 use c_ffi::*;
+#[cfg(feature = "cffi")]
 use std::ffi::{CStr,CString};
 
 const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
@@ -443,6 +446,7 @@ fn test_prefix() {
     assert_eq!(third.prefix(), [0x2].as_ref());
 }
 
+#[cfg(feature = "cffi")]
 #[test]
 fn test_c_ffi_e2e(){
     let t = radix_trie_create();

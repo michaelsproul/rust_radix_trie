@@ -13,11 +13,16 @@ readme = "README.md"
 keywords = ["trie", "patricia", "collection", "generic", "prefix"]
 categories = ["data-structures", "text-processing"]
 
+
+[features]
+cffi = ["libc"]
+
+
 [dependencies]
-libc = "0.2"
 nibble_vec = "~0.0.3"
 "endian-type" = "0.1.2"
 serde = { version = "1.0", optional = true }
+libc = { version = "0.2", optional = true }
 
 [dev-dependencies]
 quickcheck = "0.4"

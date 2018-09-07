@@ -3,6 +3,7 @@ macro_rules! id {
     ($e:item) => { $e }
 }
 
+#[cfg(feature = "cffi")]
 // from https://github.com/rust-lang/regex/blob/master/regex-capi/src/macros.rs
 macro_rules! ffi_fn {
     (fn $name:ident($($arg:ident: $arg_ty:ty),*,) -> $ret:ty $body:block) => {

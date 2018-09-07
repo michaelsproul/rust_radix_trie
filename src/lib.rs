@@ -11,15 +11,22 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
 
+#[macro_use]
+mod macros;
+
+#[cfg(feature = "cffi")]
 extern crate libc;
+#[cfg(feature = "cffi")]
+mod c_ffi;
+#[cfg(feature = "cffi")]
+pub use c_ffi::*;
 
 pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use trie_common::TrieCommon;
 use trie_node::TrieNode;
 
-#[macro_use]
-mod macros;
+
 mod keys;
 pub mod iter;
 mod traversal;
@@ -34,9 +41,6 @@ mod serde;
 mod test;
 #[cfg(test)]
 mod qc_test;
-
-mod c_ffi;
-pub use c_ffi::*;
 
 const BRANCH_FACTOR: usize = 16;
 
