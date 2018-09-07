@@ -1,6 +1,6 @@
 use NibbleVec;
 use endian_type::{LittleEndian, BigEndian};
-use std::ffi::OsString;
+use std::ffi::{CStr,CString,OsString};
 use std::path::{Path, PathBuf};
 
 /// Trait for types which can be used to key a Radix Trie.
@@ -97,6 +97,18 @@ impl TrieKey for [u8] {
 impl TrieKey for String {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_bytes().encode_bytes()
+    }
+}
+
+impl TrieKey for CStr {
+    fn encode_bytes(&self) -> Vec<u8> {
+        return self.to_bytes().to_vec();
+    }
+}
+
+impl TrieKey for CString {
+    fn encode_bytes(&self) -> Vec<u8> {
+        return self.to_bytes().to_vec();
     }
 }
 
