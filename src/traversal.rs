@@ -151,22 +151,26 @@ fn recursive_remove<K, Q: ?Sized, V>(trie: &mut TrieNode<K, V>, key: &Q) -> Opti
 
     match child {
         Some(mut child) => {
-            let depth = child.key.len();
-            if depth == nv.len() {
-                let result = child.take_value(key);
-                if child.child_count != 0 {
-                    // If removing this node's value has made it a value-less node with a
-                    // single child, then merge its child.
-                    let repl = if child.child_count == 1 {
-                        get_merge_child(&mut child)
-                    } else {
-                        child
-                    };
-                    trie.add_child(bucket, repl);
+            match match_keys(0, &nv, &child.key) {
+                KeyMatch::Full => {
+                    let result = child.take_value(key);
+                    if child.child_count != 0 {
+                        // If removing this node's value has made it a value-less node with a
+                        // single child, then merge its child.
+                        let repl = if child.child_count == 1 {
+                            get_merge_child(&mut child)
+                        } else {
+                            child
+                        };
+                        trie.add_child(bucket, repl);
+                    }
+                    result
                 }
-                result
-            } else {
-                rec_remove(trie, child, bucket, key, depth, &nv)
+                KeyMatch::SecondPrefix => {
+                    let depth = child.key.len();
+                    rec_remove(trie, child, bucket, key, depth, &nv)
+                }
+                _ => None,
             }
         }
         None => None,
