@@ -140,6 +140,26 @@ fn remove_simple() {
 }
 
 #[test]
+fn remove_non_existent() {
+    let mut trie = Trie::new();
+
+    trie.insert("acab", true);
+
+    assert_eq!(trie.remove(&"abc"), None);
+    assert_eq!(trie.remove(&"acaba"), None);
+    assert_eq!(trie.remove(&"a"), None);
+    assert_eq!(trie.remove(&""), None);
+    assert_eq!(trie.len(), 1);
+
+    trie.insert("acaz", true);
+
+    assert_eq!(trie.remove(&"acb"), None);
+    assert_eq!(trie.remove(&"acaca"), None);
+    assert_eq!(trie.remove(&"aca"), None);
+    assert_eq!(trie.len(), 2);
+}
+
+#[test]
 fn nearest_ancestor_root() {
     let mut trie = Trie::new();
     trie.insert("", 55);

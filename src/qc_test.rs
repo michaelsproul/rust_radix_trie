@@ -232,6 +232,21 @@ fn length_trie(keys: HashSet<Key>) -> Trie<Key, usize> {
 }
 
 #[test]
+fn remove_non_existent() {
+    fn prop(RandomKeys(insert_keys): RandomKeys, RandomKeys(remove_keys): RandomKeys) -> bool {
+        let mut trie = length_trie(insert_keys.clone());
+
+        for k in remove_keys {
+            if !insert_keys.contains(&k) && !trie.remove(&k).is_none() {
+                return false;
+            }
+        }
+        true
+    }
+    quickcheck(prop as fn(RandomKeys, RandomKeys) -> bool);
+}
+
+#[test]
 fn keys_iter() {
     fn prop(RandomKeys(keys): RandomKeys) -> bool {
         let trie = length_trie(keys.clone());
