@@ -1,17 +1,19 @@
 extern crate serde;
 
-use super::{Trie, TrieKey, TrieCommon};
-use self::serde::{Serialize, Serializer, Deserialize, Deserializer, de};
 use self::serde::ser::SerializeMap;
-use std::marker::PhantomData;
+use self::serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use super::{Trie, TrieCommon, TrieKey};
 use std::fmt::{self, Formatter};
+use std::marker::PhantomData;
 
 impl<K, V> Serialize for Trie<K, V>
-    where K: Serialize + TrieKey,
-          V: Serialize
+where
+    K: Serialize + TrieKey,
+    V: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         let mut map = serializer.serialize_map(Some(self.len()))?;
         for (k, v) in self.iter() {
@@ -21,20 +23,22 @@ impl<K, V> Serialize for Trie<K, V>
     }
 }
 
-
 struct TrieVisitor<K, V> {
     marker: PhantomData<Trie<K, V>>,
 }
 
 impl<K, V> TrieVisitor<K, V> {
     fn new() -> Self {
-        TrieVisitor { marker: PhantomData }
+        TrieVisitor {
+            marker: PhantomData,
+        }
     }
 }
 
 impl<'a, K, V> de::Visitor<'a> for TrieVisitor<K, V>
-    where K: Deserialize<'a> + Clone + Eq + PartialEq + TrieKey,
-          V: Deserialize<'a>
+where
+    K: Deserialize<'a> + Clone + Eq + PartialEq + TrieKey,
+    V: Deserialize<'a>,
 {
     type Value = Trie<K, V>;
 
@@ -43,7 +47,8 @@ impl<'a, K, V> de::Visitor<'a> for TrieVisitor<K, V>
     }
 
     fn visit_map<M>(self, mut visitor: M) -> Result<Self::Value, M::Error>
-        where M: de::MapAccess<'a>
+    where
+        M: de::MapAccess<'a>,
     {
         let mut values = Trie::new();
 
@@ -55,18 +60,21 @@ impl<'a, K, V> de::Visitor<'a> for TrieVisitor<K, V>
     }
 
     fn visit_unit<E>(self) -> Result<Self::Value, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         Ok(Trie::new())
     }
 }
 
 impl<'a, K, V> Deserialize<'a> for Trie<K, V>
-    where K: Deserialize<'a> + Clone + Eq + PartialEq + TrieKey,
-          V: Deserialize<'a>
+where
+    K: Deserialize<'a> + Clone + Eq + PartialEq + TrieKey,
+    V: Deserialize<'a>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'a>
+    where
+        D: Deserializer<'a>,
     {
         // Instantiate our Visitor and ask the Deserializer to drive
         // it over the input data, resulting in an instance of MyMap.
@@ -77,7 +85,7 @@ impl<'a, K, V> Deserialize<'a> for Trie<K, V>
 #[cfg(test)]
 mod test {
     extern crate serde_test;
-    use self::serde_test::{Token};
+    use self::serde_test::Token;
     use super::super::Trie;
 
     macro_rules! tests_de {

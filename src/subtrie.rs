@@ -1,37 +1,48 @@
-use std::borrow::Borrow;
-use {SubTrie, SubTrieMut, SubTrieResult, NibbleVec};
-use trie_node::TrieNode;
 use keys::*;
+use std::borrow::Borrow;
+use trie_node::TrieNode;
+use {NibbleVec, SubTrie, SubTrieMut, SubTrieResult};
 
 impl<'a, K, V> SubTrie<'a, K, V>
-    where K: TrieKey
+where
+    K: TrieKey,
 {
     /// Look up the value for the given key, which should be an extension of this subtrie's key.
     ///
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     pub fn get<Q: ?Sized>(&self, key: &Q) -> SubTrieResult<&V>
-        where K: Borrow<Q>, Q: TrieKey {
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
         subtrie_get(&self.prefix, self.node, key)
     }
 }
 
-fn subtrie_get<'a, K, Q: ?Sized, V>(prefix: &NibbleVec,
-                         node: &'a TrieNode<K, V>,
-                         key: &Q)
-                         -> SubTrieResult<&'a V>
-    where K: TrieKey, K: Borrow<Q>, Q: TrieKey
+fn subtrie_get<'a, K, Q: ?Sized, V>(
+    prefix: &NibbleVec,
+    node: &'a TrieNode<K, V>,
+    key: &Q,
+) -> SubTrieResult<&'a V>
+where
+    K: TrieKey,
+    K: Borrow<Q>,
+    Q: TrieKey,
 {
     let key_enc = key.encode();
     match match_keys(0, prefix, &key_enc) {
         KeyMatch::Full => Ok(node.value()),
-        KeyMatch::FirstPrefix => Ok(node.get(&stripped(key_enc, prefix)).and_then(TrieNode::value)),
+        KeyMatch::FirstPrefix => Ok(node
+            .get(&stripped(key_enc, prefix))
+            .and_then(TrieNode::value)),
         _ => Err(()),
     }
 }
 
 impl<'a, K, V> SubTrieMut<'a, K, V>
-    where K: TrieKey
+where
+    K: TrieKey,
 {
     /// Mutable reference to the node's value.
     pub fn value_mut(&mut self) -> Option<&mut V> {
@@ -43,7 +54,10 @@ impl<'a, K, V> SubTrieMut<'a, K, V>
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     pub fn get<Q: ?Sized>(&self, key: &Q) -> SubTrieResult<&V>
-        where K: Borrow<Q>, Q: TrieKey {
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
         subtrie_get(&self.prefix, &*self.node, key)
     }
 
@@ -52,7 +66,9 @@ impl<'a, K, V> SubTrieMut<'a, K, V>
         let key_enc = key.encode();
         let previous = match match_keys(0, &self.prefix, &key_enc) {
             KeyMatch::Full => self.node.replace_value(key, value),
-            KeyMatch::FirstPrefix => self.node.insert(key, value, stripped(key_enc, &self.prefix)),
+            KeyMatch::FirstPrefix => self
+                .node
+                .insert(key, value, stripped(key_enc, &self.prefix)),
             _ => {
                 return Err(());
             }
@@ -70,7 +86,10 @@ impl<'a, K, V> SubTrieMut<'a, K, V>
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> SubTrieResult<V>
-        where K: Borrow<Q>, Q: TrieKey {
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
         let key_enc = key.encode();
         let removed = match match_keys(0, &self.prefix, &key_enc) {
             KeyMatch::Full => self.node.take_value(key),

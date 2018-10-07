@@ -1,10 +1,10 @@
 //! Iterators over key-value pairs, keys, values and child subtries.
 
+use std::iter::{FilterMap, FromIterator, Map};
 use std::slice;
-use std::iter::{Map, FilterMap, FromIterator};
 
-use {Trie, TrieKey, SubTrie, NibbleVec};
 use trie_node::TrieNode;
+use {NibbleVec, SubTrie, Trie, TrieKey};
 
 // MY EYES.
 type Child<K, V> = Box<TrieNode<K, V>>;
@@ -42,7 +42,9 @@ impl<'a, K, V> Keys<'a, K, V> {
         fn first<'b, K, V>((k, _): (&'b K, &'b V)) -> &'b K {
             k
         }
-        Keys { inner: iter.map(first) }
+        Keys {
+            inner: iter.map(first),
+        }
     }
 }
 
@@ -66,7 +68,9 @@ impl<'a, K, V> Values<'a, K, V> {
         fn second<'b, K, V>((_, v): (&'b K, &'b V)) -> &'b V {
             v
         }
-        Values { inner: iter.map(second) }
+        Values {
+            inner: iter.map(second),
+        }
     }
 }
 
@@ -97,11 +101,9 @@ impl<'a, K, V> Iterator for Children<'a, K, V> {
     type Item = SubTrie<'a, K, V>;
 
     fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
-        self.inner.next().map(|node| {
-            SubTrie {
-                prefix: self.prefix.clone().join(&node.key),
-                node: node,
-            }
+        self.inner.next().map(|node| SubTrie {
+            prefix: self.prefix.clone().join(&node.key),
+            node: node,
         })
     }
 }
@@ -144,12 +146,10 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
 
         loop {
             let action = match self.stack.last_mut() {
-                Some(stack_top) => {
-                    match stack_top.next() {
-                        Some(child) => Push(child),
-                        None => Pop,
-                    }
-                }
+                Some(stack_top) => match stack_top.next() {
+                    Some(child) => Push(child),
+                    None => Pop,
+                },
                 None => return None,
             };
 
@@ -169,10 +169,12 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
 }
 
 impl<K, V> FromIterator<(K, V)> for Trie<K, V>
-    where K: TrieKey
+where
+    K: TrieKey,
 {
     fn from_iter<T>(iter: T) -> Trie<K, V>
-        where T: IntoIterator<Item = (K, V)>
+    where
+        T: IntoIterator<Item = (K, V)>,
     {
         let mut trie = Trie::new();
         for (k, v) in iter {

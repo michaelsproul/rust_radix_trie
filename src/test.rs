@@ -1,15 +1,17 @@
+use keys::TrieKey;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use {Trie, TrieCommon};
-use keys::TrieKey;
 
-const TEST_DATA: [(&'static str, u32); 7] = [("abcdefgh", 19),
-                                             ("abcdef", 18),
-                                             ("abcd", 17),
-                                             ("ab", 16),
-                                             ("a", 15),
-                                             ("acbdef", 30),
-                                             ("bcdefgh", 29)];
+const TEST_DATA: [(&'static str, u32); 7] = [
+    ("abcdefgh", 19),
+    ("abcdef", 18),
+    ("abcd", 17),
+    ("ab", 16),
+    ("a", 15),
+    ("acbdef", 30),
+    ("bcdefgh", 29),
+];
 
 fn test_trie() -> Trie<&'static str, u32> {
     let mut trie = Trie::new();
@@ -43,8 +45,12 @@ fn unicode() {
     trie.insert("bären", 2);
 
     assert_eq!(*trie.get("bär").unwrap(), 1);
-    let values = trie.get_raw_descendant("bä").unwrap().values().collect::<HashSet<_>>();
-    assert_eq!([1,2].iter().collect::<HashSet<_>>(), values);
+    let values = trie
+        .get_raw_descendant("bä")
+        .unwrap()
+        .values()
+        .collect::<HashSet<_>>();
+    assert_eq!([1, 2].iter().collect::<HashSet<_>>(), values);
 }
 
 #[test]
@@ -98,17 +104,9 @@ fn insert_replace() {
 #[test]
 fn map_with_default() {
     let mut trie = test_trie();
-    trie.map_with_default(&"abcd",
-                          {
-                              |x| *x = *x + 1
-                          },
-                          42);
+    trie.map_with_default(&"abcd", |x| *x = *x + 1, 42);
     assert_eq!(*trie.get(&"abcd").unwrap(), 17 + 1);
-    trie.map_with_default(&"zzz",
-                          {
-                              |x| *x = *x + 1
-                          },
-                          42);
+    trie.map_with_default(&"zzz", |x| *x = *x + 1, 42);
     assert_eq!(*trie.get(&"zzz").unwrap(), 42);
 }
 
@@ -230,10 +228,14 @@ fn iter() {
 #[test]
 fn get_raw_descendant() {
     let trie = test_trie();
-    assert_eq!(trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()),
-               Some(&19));
-    assert_eq!(trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()),
-               Some(&19));
+    assert_eq!(
+        trie.get_raw_descendant(&"abcdefgh").and_then(|t| t.value()),
+        Some(&19)
+    );
+    assert_eq!(
+        trie.get_raw_descendant(&"abcdefg").and_then(|t| t.value()),
+        Some(&19)
+    );
     assert!(trie.get_raw_descendant(&"acbg").is_none());
 }
 
@@ -246,7 +248,10 @@ fn raw_descendant_prefix() {
 
     assert_eq!(t.get_raw_descendant(&"a").unwrap().prefix, "abc".encode());
     assert_eq!(t.get_raw_descendant(&"abc").unwrap().prefix, "abc".encode());
-    assert_eq!(t.get_raw_descendant(&"abca").unwrap().prefix, "abcaaaa".encode());
+    assert_eq!(
+        t.get_raw_descendant(&"abca").unwrap().prefix,
+        "abcaaaa".encode()
+    );
 }
 
 #[test]
@@ -355,9 +360,7 @@ fn int_keys() {
 
 #[test]
 fn from_iter() {
-    let trie: Trie<&str, u32> = Trie::from_iter(vec![
-        ("test", 10), ("hello", 12)
-    ]);
+    let trie: Trie<&str, u32> = Trie::from_iter(vec![("test", 10), ("hello", 12)]);
     assert_eq!(*trie.get(&"test").unwrap(), 10);
     assert_eq!(*trie.get(&"hello").unwrap(), 12);
     assert_eq!(trie.len(), 2);

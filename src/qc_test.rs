@@ -1,9 +1,9 @@
 //! Proper testing, with QuickCheck.
 
-use {Trie, TrieKey, TrieCommon};
+use quickcheck::{quickcheck, Arbitrary, Gen};
+use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
-use std::collections::{HashSet, HashMap};
-use quickcheck::{quickcheck, Gen, Arbitrary};
+use {Trie, TrieCommon, TrieKey};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Key(Vec<u8>);
@@ -188,18 +188,16 @@ fn subtrie_mut_get() {
 
 #[test]
 fn subtrie_insert() {
-    fn prop(
-        trie_keys: RandomKeys,
-        key_suffixes: RandomKeys,
-        k1: Key
-    ) -> bool {
+    fn prop(trie_keys: RandomKeys, key_suffixes: RandomKeys, k1: Key) -> bool {
         let mut trie = length_trie(trie_keys.0);
         trie.insert(k1.clone(), k1.len());
 
         {
             let mut subtrie = trie.subtrie_mut(&k1).unwrap();
 
-            let insert_keys = key_suffixes.0.into_iter()
+            let insert_keys = key_suffixes
+                .0
+                .into_iter()
                 .map(|x| k1.extend(x))
                 .collect::<HashSet<_>>();
 
@@ -210,7 +208,7 @@ fn subtrie_insert() {
             for k in insert_keys.iter() {
                 match subtrie.get(k) {
                     Ok(Some(_)) => (),
-                    _ => return false
+                    _ => return false,
                 }
             }
         }

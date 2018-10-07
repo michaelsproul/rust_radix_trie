@@ -4,34 +4,34 @@
 
 // #![warn(missing_docs)]
 
-extern crate nibble_vec;
 extern crate endian_type;
+extern crate nibble_vec;
 #[cfg(test)]
 extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
 
-pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
+pub use nibble_vec::NibbleVec;
 pub use trie_common::TrieCommon;
 use trie_node::TrieNode;
 
 #[macro_use]
 mod macros;
-mod keys;
 pub mod iter;
-mod traversal;
-mod trie;
-mod subtrie;
-mod trie_node;
-mod trie_common;
+mod keys;
 #[cfg(feature = "serde")]
 mod serde;
+mod subtrie;
+mod traversal;
+mod trie;
+mod trie_common;
+mod trie_node;
 
 #[cfg(test)]
-mod test;
-#[cfg(test)]
 mod qc_test;
+#[cfg(test)]
+mod test;
 
 const BRANCH_FACTOR: usize = 16;
 
