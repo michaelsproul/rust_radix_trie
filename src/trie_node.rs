@@ -1,7 +1,7 @@
+use keys::*;
 use std::borrow::Borrow;
 use std::default::Default;
-use {SubTrie, SubTrieMut, NibbleVec, BRANCH_FACTOR};
-use keys::*;
+use {NibbleVec, SubTrie, SubTrieMut, BRANCH_FACTOR};
 
 #[derive(Debug)]
 pub struct TrieNode<K, V> {
@@ -27,16 +27,17 @@ pub struct KeyValue<K, V> {
 }
 
 macro_rules! no_children {
-    () => ([
-        None, None, None, None,
-        None, None, None, None,
-        None, None, None, None,
-        None, None, None, None
-    ])
+    () => {
+        [
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None,
+        ]
+    };
 }
 
 impl<K, V> TrieNode<K, V>
-    where K: TrieKey
+where
+    K: TrieKey,
 {
     /// Create a value-less, child-less TrieNode.
     pub fn new() -> TrieNode<K, V> {
@@ -81,7 +82,10 @@ impl<K, V> TrieNode<K, V>
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     pub fn value_checked<Q: ?Sized>(&self, key: &Q) -> Option<&V>
-        where K: Borrow<Q>, Q: TrieKey {
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
         self.key_value.as_ref().map(|kv| {
             check_keys(kv.key.borrow(), key);
             &kv.value
@@ -93,7 +97,10 @@ impl<K, V> TrieNode<K, V>
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     pub fn value_checked_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
-        where K: Borrow<Q>, Q: TrieKey {
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
         self.key_value.as_mut().map(|kv| {
             check_keys(kv.key.borrow(), key);
             &mut kv.value
@@ -155,7 +162,10 @@ impl<K, V> TrieNode<K, V>
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     pub fn take_value<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
-        where K: Borrow<Q>, Q: TrieKey {
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
         self.key_value.take().map(|kv| {
             check_keys(kv.key.borrow(), key);
             kv.value
@@ -210,13 +220,15 @@ impl<K, V> TrieNode<K, V>
     pub fn as_subtrie(&self, prefix: NibbleVec) -> SubTrie<K, V> {
         SubTrie {
             prefix: prefix,
-            node: self
+            node: self,
         }
     }
 
-    pub fn as_subtrie_mut<'a>(&'a mut self, prefix: NibbleVec, length: &'a mut usize)
-        -> SubTrieMut<'a, K, V>
-    {
+    pub fn as_subtrie_mut<'a>(
+        &'a mut self,
+        prefix: NibbleVec,
+        length: &'a mut usize,
+    ) -> SubTrieMut<'a, K, V> {
         SubTrieMut {
             prefix: prefix,
             length: length,
@@ -244,12 +256,16 @@ impl<K, V> TrieNode<K, V>
         }
 
         // Check that the child count matches the actual number of children.
-        let child_count = self.children.iter().fold(0, |acc, e| acc + (e.is_some() as usize));
+        let child_count = self
+            .children
+            .iter()
+            .fold(0, |acc, e| acc + (e.is_some() as usize));
 
         if child_count != self.child_count {
-            println!("Child count error, recorded: {}, actual: {}",
-                     self.child_count,
-                     child_count);
+            println!(
+                "Child count error, recorded: {}, actual: {}",
+                self.child_count, child_count
+            );
             return (false, sub_tree_size);
         }
 

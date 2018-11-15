@@ -1,7 +1,7 @@
-use NibbleVec;
 use endian_type::{LittleEndian, BigEndian};
 use std::ffi::{CStr,CString, OsString};
 use std::path::{Path, PathBuf};
+use NibbleVec;
 
 /// Trait for types which can be used to key a Radix Trie.
 ///
@@ -65,7 +65,8 @@ pub fn match_keys(start_idx: usize, first: &NibbleVec, second: &NibbleVec) -> Ke
 
 /// Check two keys for equality and panic if they differ.
 pub fn check_keys<K: ?Sized>(key1: &K, key2: &K)
-    where K: TrieKey
+where
+    K: TrieKey,
 {
     if *key1 != *key2 {
         panic!("multiple-keys with the same bit representation.");
@@ -80,7 +81,6 @@ pub fn check_keys<K: ?Sized>(key1: &K, key2: &K)
 // self.clone().into()
 // }
 // }
-
 
 impl TrieKey for Vec<u8> {
     fn encode_bytes(&self) -> Vec<u8> {
@@ -150,7 +150,7 @@ impl TrieKey for u8 {
 impl TrieKey for PathBuf {
     fn encode_bytes(&self) -> Vec<u8> {
         use std::os::unix::ffi::OsStringExt;
-        let str : OsString = self.clone().into();
+        let str: OsString = self.clone().into();
         str.into_vec()
     }
 }
@@ -164,7 +164,8 @@ impl TrieKey for Path {
 }
 
 impl<T> TrieKey for LittleEndian<T>
-    where T: Eq + Copy
+where
+    T: Eq + Copy,
 {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_bytes().encode_bytes()
@@ -172,7 +173,8 @@ impl<T> TrieKey for LittleEndian<T>
 }
 
 impl<T> TrieKey for BigEndian<T>
-    where T: Eq + Copy
+where
+    T: Eq + Copy,
 {
     fn encode_bytes(&self) -> Vec<u8> {
         self.as_bytes().to_vec()

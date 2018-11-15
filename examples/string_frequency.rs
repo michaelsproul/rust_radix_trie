@@ -16,7 +16,7 @@ fn main() {
             // Append all chars in a to the String
             s.extend(a);
             // If the value at s exists, add 1. Otherwise, assign 1 as the key's value.
-            trie.map_with_default(s, |v| { *v += 1; }, 1);
+            trie.map_with_default(s, |v| *v += 1, 1);
         }
     }
 

@@ -1,6 +1,9 @@
 language: rust
 os:
   - linux
+before_script:
+  - rustup component add rustfmt-preview
 script:
   - cargo test --verbose --features serde,cffi
   - cargo doc --no-deps --features serde,cffi
+  - cargo fmt --all -- --check
