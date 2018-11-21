@@ -22,14 +22,11 @@ mod c_ffi;
 #[cfg(feature = "cffi")]
 pub use c_ffi::*;
 
-pub use nibble_vec::NibbleVec;
 pub use keys::TrieKey;
 pub use nibble_vec::NibbleVec;
 pub use trie_common::TrieCommon;
 use trie_node::TrieNode;
 
-#[macro_use]
-mod macros;
 pub mod iter;
 mod keys;
 #[cfg(feature = "serde")]
