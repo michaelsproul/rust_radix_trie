@@ -6,6 +6,8 @@ environment:
   - RUST_TOOL_CHAIN: stable
   - RUST_TOOL_CHAIN: nightly
 before_build:
+  - rustc -V
+  - cargo -V
   - rustup component add rustfmt-preview
 build_script:
   - cargo build --release
@@ -37,6 +39,3 @@ for:
       - scoop install rustup
       - refreshenv
       - rustup default %RUST_TOOL_CHAIN%
-      - rustup component add rustfmt-preview
-      - rustc -V
-      - cargo -V
