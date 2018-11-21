@@ -6,7 +6,7 @@ use {Trie, TrieCommon};
 #[cfg(feature = "cffi")]
 use c_ffi::*;
 #[cfg(feature = "cffi")]
-use std::ffi::{CString};
+use std::ffi::CString;
 
 const TEST_DATA: [(&'static str, u32); 7] = [
     ("abcdefgh", 19),
@@ -471,13 +471,13 @@ fn test_prefix() {
 
 #[cfg(feature = "cffi")]
 #[test]
-fn test_c_ffi_e2e(){
+fn test_c_ffi_e2e() {
     let t = radix_trie_create();
     //let key = CString::new("key1").unwrap().as_ptr();
     let key1 = CString::new("key1").unwrap().into_raw();
     let key2 = CString::new("key2").unwrap().into_raw();
 
-    radix_trie_insert(t,  key1, 1);
+    radix_trie_insert(t, key1, 1);
     radix_trie_insert(t, key2, 2);
 
     let len = radix_trie_len(t);

@@ -1,5 +1,5 @@
-use endian_type::{LittleEndian, BigEndian};
-use std::ffi::{CStr,CString, OsString};
+use endian_type::{BigEndian, LittleEndian};
+use std::ffi::{CStr, CString, OsString};
 use std::path::{Path, PathBuf};
 use NibbleVec;
 

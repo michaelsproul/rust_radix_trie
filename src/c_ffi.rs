@@ -1,8 +1,8 @@
-use libc::{c_char};
-use std::ffi::{CString};
+use libc::c_char;
+use std::ffi::CString;
 
-use super::Trie;
 use super::trie_common::TrieCommon;
+use super::Trie;
 
 ffi_fn! {
     fn radix_trie_create()-> *mut Trie<CString, usize>{
