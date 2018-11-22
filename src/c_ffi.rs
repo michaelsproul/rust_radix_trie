@@ -13,13 +13,13 @@ ffi_fn! {
 
 ffi_fn! {
     fn radix_trie_free(trie_ptr: *mut Trie<CString, usize>){
-        unsafe { Box::from_raw(trie_ptr as *mut Trie<CString, usize>); }
+        unsafe { Box::from_raw(trie_ptr); }
     }
 }
 
 ffi_fn! {
     fn radix_trie_insert(trie_ptr:*mut Trie<CString, usize>, key_ptr:*const c_char, value:usize){
-        let trie = unsafe { &mut *(trie_ptr as *mut Trie<CString, usize>) };
+        let trie = unsafe { &mut *(trie_ptr) };
         let key =  unsafe { CString::from_raw(key_ptr as *mut c_char) };
         trie.insert(key, value);
     }
