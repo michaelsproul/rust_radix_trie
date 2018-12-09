@@ -3,8 +3,8 @@
 use std::iter::{FilterMap, FromIterator, Map};
 use std::slice;
 
-use trie_node::TrieNode;
-use {NibbleVec, SubTrie, Trie, TrieKey};
+use crate::trie_node::TrieNode;
+use crate::{NibbleVec, SubTrie, Trie, TrieKey};
 
 // MY EYES.
 type Child<K, V> = Box<TrieNode<K, V>>;

@@ -1,7 +1,7 @@
-use keys::TrieKey;
+use crate::keys::TrieKey;
+use crate::{Trie, TrieCommon};
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use {Trie, TrieCommon};
 
 const TEST_DATA: [(&'static str, u32); 7] = [
     ("abcdefgh", 19),

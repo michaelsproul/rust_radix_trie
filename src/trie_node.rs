@@ -1,7 +1,7 @@
-use keys::*;
+use crate::keys::*;
+use crate::{NibbleVec, SubTrie, SubTrieMut, BRANCH_FACTOR};
 use std::borrow::Borrow;
 use std::default::Default;
-use {NibbleVec, SubTrie, SubTrieMut, BRANCH_FACTOR};
 
 #[derive(Debug)]
 pub struct TrieNode<K, V> {

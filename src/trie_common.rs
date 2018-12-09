@@ -1,6 +1,6 @@
-use iter::*;
-use trie_node::TrieNode;
-use {NibbleVec, SubTrie, SubTrieMut, Trie, TrieKey};
+use crate::iter::*;
+use crate::trie_node::TrieNode;
+use crate::{NibbleVec, SubTrie, SubTrieMut, Trie, TrieKey};
 
 /// Common functionality available for tries and subtries.
 pub trait TrieCommon<'a, K: 'a, V: 'a>: ContainsTrieNode<'a, K, V>

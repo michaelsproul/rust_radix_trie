@@ -2,6 +2,7 @@
 name = "radix_trie"
 version = "0.1.4"
 description = "Generic radix trie data-structure."
+edition = "2018"
 
 license = "MIT"
 authors = ["Michael Sproul <micsproul@gmail.com>"]

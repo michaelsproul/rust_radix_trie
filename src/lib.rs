@@ -3,18 +3,12 @@
 //! To get started, see the docs for `Trie` below.
 
 // #![warn(missing_docs)]
+#![deny(warnings)]
 
-extern crate endian_type;
-extern crate nibble_vec;
-#[cfg(test)]
-extern crate quickcheck;
-#[cfg(test)]
-extern crate rand;
-
-pub use keys::TrieKey;
+pub use crate::keys::TrieKey;
+pub use crate::trie_common::TrieCommon;
+use crate::trie_node::TrieNode;
 pub use nibble_vec::NibbleVec;
-pub use trie_common::TrieCommon;
-use trie_node::TrieNode;
 
 #[macro_use]
 mod macros;
