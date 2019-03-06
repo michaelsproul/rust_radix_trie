@@ -13,15 +13,24 @@ readme = "README.md"
 keywords = ["trie", "patricia", "collection", "generic", "prefix"]
 categories = ["data-structures", "text-processing"]
 
+
+[features]
+cffi = ["libc"]
+
+
 [dependencies]
 nibble_vec = "~0.0.3"
 endian-type = "0.1.2"
 serde = { version = "1.0", optional = true }
+libc = { version = "0.2", optional = true }
 
 [dev-dependencies]
 quickcheck = "0.4"
 rand = "0.3"
 serde_test = "1.0"
+
+[lib]
+crate-type = ["lib", "cdylib"]
 
 [badges]
 travis-ci = { repository = "michaelsproul/rust_radix_trie" }
