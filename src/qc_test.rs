@@ -106,10 +106,7 @@ fn insert_all_remove_all() {
                 return false;
             }
         }
-        if !trie.check_integrity() {
-            return false;
-        }
-        true
+        trie.check_integrity()
     }
 
     quickcheck(prop as fn(RandomKeys) -> bool);
@@ -143,7 +140,7 @@ fn subtrie() {
             }
         }
 
-        true
+        trie.check_integrity()
     }
 
     quickcheck(prop as fn(RandomKeys) -> bool);
@@ -176,11 +173,12 @@ fn subtrie_mut_get() {
 
         let subtrie = trie.subtrie_mut(&k1).unwrap();
 
-        if k2.0.starts_with(&k1.0) {
+        let ok = if k2.0.starts_with(&k1.0) {
             subtrie.get(&k2).is_ok()
         } else {
             subtrie.get(&k2).is_err()
-        }
+        };
+        ok && trie.check_integrity()
     }
 
     quickcheck(prop as fn(RandomKeys, Key, Key) -> bool);
@@ -235,11 +233,11 @@ fn remove_non_existent() {
         let mut trie = length_trie(insert_keys.clone());
 
         for k in remove_keys {
-            if !insert_keys.contains(&k) && !trie.remove(&k).is_none() {
+            if !insert_keys.contains(&k) && trie.remove(&k).is_some() {
                 return false;
             }
         }
-        true
+        trie.check_integrity()
     }
     quickcheck(prop as fn(RandomKeys, RandomKeys) -> bool);
 }

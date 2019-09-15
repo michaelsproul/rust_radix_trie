@@ -451,6 +451,7 @@ fn test_get_raw_descendant_borrow() {
 fn test_prefix() {
     let mut t = Trie::<u8, ()>::new();
     t.insert(0xf1, ());
+    t.remove(&0xf2);
     t.insert(0xf2, ());
     println!("{:#?}", t);
     assert_eq!(t.prefix(), [].as_ref());

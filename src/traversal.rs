@@ -183,7 +183,10 @@ where
                     let depth = child.key.len();
                     rec_remove(trie, child, bucket, key, depth, &nv)
                 }
-                _ => None,
+                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                    trie.add_child(bucket, child);
+                    None
+                }
             }
         }
         None => None,
@@ -251,7 +254,10 @@ where
                     let new_depth = depth + child.key.len();
                     rec_remove(middle, child, bucket, key, new_depth, nv)
                 }
-                _ => None,
+                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                    middle.add_child(bucket, child);
+                    None
+                }
             }
         }
         None => None,
