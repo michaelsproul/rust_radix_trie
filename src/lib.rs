@@ -46,7 +46,7 @@ const BRANCH_FACTOR: usize = 16;
 /// nicely using `Option::and_then`.
 ///
 /// [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Trie<K, V> {
     /// The number of values stored in this sub-trie (this node and all descendants).
     length: usize,

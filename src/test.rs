@@ -464,3 +464,17 @@ fn test_prefix() {
     assert_eq!(second.prefix(), [0x1].as_ref());
     assert_eq!(third.prefix(), [0x2].as_ref());
 }
+
+#[test]
+fn clone() {
+    let mut t1 = test_trie();
+    let mut t2 = t1.clone();
+
+    assert_eq!(t1, t2);
+    t1.insert("abc", 22);
+
+    assert_ne!(t1, t2);
+    t2.insert("abc", 22);
+
+    assert_eq!(t1, t2);
+}
