@@ -45,7 +45,7 @@ Made by:
 
 # License
 
-MIT License. Copyright © Michael Sproul and contributors 2015-2018.
+MIT License. Copyright © Michael Sproul and contributors 2015-present.
 
 [radix-wiki]: http://en.wikipedia.org/wiki/Radix_tree
 [seq-trie]: https://github.com/michaelsproul/rust_sequence_trie
