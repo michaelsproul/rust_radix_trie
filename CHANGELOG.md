@@ -1,6 +1,11 @@
 Changelog
 ====
 
+0.1.5:
+
+* Fix another bug related to the removal of non-existent keys (#50)
+* Implement `Clone` for `Trie`
+
 0.1.4:
 
 * Fix a panic that occurred when removing non-existent keys (#40)
