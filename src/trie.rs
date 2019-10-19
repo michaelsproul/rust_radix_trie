@@ -1,7 +1,7 @@
-use std::borrow::Borrow;
 use crate::traversal::DescendantResult::*;
 use crate::TrieNode;
 use crate::{NibbleVec, SubTrie, SubTrieMut, Trie, TrieCommon, TrieKey};
+use std::borrow::Borrow;
 
 impl<K, V> Trie<K, V>
 where

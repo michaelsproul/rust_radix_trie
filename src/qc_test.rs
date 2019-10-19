@@ -3,7 +3,7 @@
 use quickcheck::{quickcheck, Arbitrary, Gen};
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
-use {Trie, TrieCommon, TrieKey};
+use crate::{Trie, TrieCommon, TrieKey};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Key(Vec<u8>);

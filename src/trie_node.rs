@@ -1,7 +1,7 @@
 use crate::keys::*;
+use crate::{NibbleVec, SubTrie, SubTrieMut, BRANCH_FACTOR};
 use std::borrow::Borrow;
 use std::default::Default;
-use crate::{NibbleVec, SubTrie, SubTrieMut, BRANCH_FACTOR};
 
 #[derive(Debug, Clone)]
 pub struct TrieNode<K, V> {
@@ -151,8 +151,8 @@ where
     pub fn add_key_value(&mut self, key: K, value: V) {
         debug_assert!(self.key_value.is_none());
         self.key_value = Some(Box::new(KeyValue {
-            key: key,
-            value: value,
+            key,
+            value,
         }));
     }
 
@@ -211,9 +211,9 @@ where
         let bucket = key.get(0) as usize;
         self.children[bucket] = Some(Box::new(TrieNode {
             key: key,
-            key_value: key_value,
-            children: children,
-            child_count: child_count,
+            key_value,
+            children,
+            child_count,
         }));
     }
 
