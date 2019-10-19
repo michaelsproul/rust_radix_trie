@@ -52,7 +52,7 @@ fn trie_insert_remove(b: &mut Criterion) {
                 trie.remove(&&w[..]);
             }
         });
-    })
+    });
 }
 
 criterion_group!(benches, trie_insert, trie_get);
