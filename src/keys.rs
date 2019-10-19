@@ -1,7 +1,7 @@
 use endian_type::{BigEndian, LittleEndian};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use NibbleVec;
+use crate::NibbleVec;
 
 /// Trait for types which can be used to key a Radix Trie.
 ///
