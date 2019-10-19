@@ -55,6 +55,6 @@ fn trie_insert_remove(b: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, trie_insert, trie_get);
+criterion_group!(benches, trie_insert, trie_get, trie_insert_remove);
 
 criterion_main!(benches);
