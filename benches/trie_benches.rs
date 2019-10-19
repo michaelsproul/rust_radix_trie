@@ -42,7 +42,7 @@ fn trie_get(b: &mut Criterion) {
     });
 }
 
-fn trie_insert_remove(b: &mut Bencher) {
+fn trie_insert_remove(b: &mut Criterion) {
     let words = get_text();
 
     b.bench_function("trie remove", |b| {
