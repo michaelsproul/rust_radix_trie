@@ -150,10 +150,7 @@ where
     /// Set the key and value of a node, given that it currently lacks one.
     pub fn add_key_value(&mut self, key: K, value: V) {
         debug_assert!(self.key_value.is_none());
-        self.key_value = Some(Box::new(KeyValue {
-            key,
-            value,
-        }));
+        self.key_value = Some(Box::new(KeyValue { key, value }));
     }
 
     /// Move the value out of a node, whilst checking that its key is as expected.
