@@ -1,7 +1,7 @@
-use keys::*;
+use crate::keys::*;
+use crate::TrieNode;
+use crate::{NibbleVec, SubTrie, SubTrieMut, SubTrieResult};
 use std::borrow::Borrow;
-use trie_node::TrieNode;
-use {NibbleVec, SubTrie, SubTrieMut, SubTrieResult};
 
 impl<'a, K, V> SubTrie<'a, K, V>
 where

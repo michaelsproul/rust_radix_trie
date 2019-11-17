@@ -1,9 +1,9 @@
 //! This module contains the core algorithms.
 
-use keys::{match_keys, KeyMatch};
+use crate::keys::{match_keys, KeyMatch};
+use crate::TrieNode;
+use crate::{NibbleVec, TrieKey};
 use std::borrow::Borrow;
-use trie_node::TrieNode;
-use {NibbleVec, TrieKey};
 
 use self::DescendantResult::*;
 

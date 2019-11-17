@@ -1,9 +1,9 @@
 //! Proper testing, with QuickCheck.
 
+use crate::{Trie, TrieCommon, TrieKey};
 use quickcheck::{quickcheck, Arbitrary, Gen};
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
-use {Trie, TrieCommon, TrieKey};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Key(Vec<u8>);

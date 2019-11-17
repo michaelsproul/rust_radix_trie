@@ -9,5 +9,5 @@ fn main() {
     trie.insert("not related", 1u32);
     trie.insert("handle nested", 5u32);
 
-    println!("{:?}", trie);
+    println!("{:#?}", trie);
 }
