@@ -1,7 +1,8 @@
 Rust Radix Trie
 ====
 
-[![Build Status](https://travis-ci.org/michaelsproul/rust_radix_trie.svg?branch=master)](https://travis-ci.org/michaelsproul/rust_radix_trie)
+[![Unix Build Status](https://travis-ci.org/michaelsproul/rust_radix_trie.svg?branch=master)](https://travis-ci.org/michaelsproul/rust_radix_trie)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/d2voj1te0m7agfne/branch/master?svg=true)](https://ci.appveyor.com/project/michaelsproul/rust-radix-trie/branch/master)
 
 This is a [Radix Trie][radix-wiki] implementation in Rust, building on the lessons learnt from `TrieMap` and [Sequence Trie][seq-trie]. You can read about my experience implementing this data structure [here][radix-paper].
 
