@@ -1,6 +1,12 @@
 Changelog
 ====
 
+0.1.6:
+
+* Update to Rust 2018, add benchmarking code (#52)
+* Appveyor CI for Windows (#42)
+* No API changes or bugfixes
+
 0.1.5:
 
 * Fix another bug related to the removal of non-existent keys (#50)

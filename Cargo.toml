@@ -1,6 +1,6 @@
 [package]
 name = "radix_trie"
-version = "0.1.5"
+version = "0.1.6"
 description = "Generic radix trie data-structure."
 edition = "2018"
 license = "MIT"
@@ -33,3 +33,5 @@ bench = false
 
 [badges]
 travis-ci = { repository = "michaelsproul/rust_radix_trie" }
+appveyor = { repository = "michaelsproul/rust_radix_trie" }
+maintenance = { status = "as-is" }

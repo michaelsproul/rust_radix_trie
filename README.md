@@ -38,6 +38,8 @@ Made by:
 * Allan Simon ([@allan-simon](https://github.com/allan-simon))
 * Andrew Smith ([@andrewcsmith](https://github.com/andrewcsmith))
 * Arthur Carcano ([@NougatRillettes](https://github.com/NougatRillettes))
+* Devin Ragotzy ([@DevinR528](https://github.com/DevinR528))
+* [@hanabi1224](https://github.com/hanabi1224)
 * Michael Sproul ([@michaelsproul](https://github.com/michaelsproul))
 * Robin Lambertz ([@roblabla](https://github.com/roblabla))
 * Sergey ([@Albibek](https://github.com/Albibek))
