@@ -1,6 +1,5 @@
 image:
   - Visual Studio 2017
-  - Ubuntu
 environment:
   matrix:
   - RUST_TOOL_CHAIN: stable
@@ -23,13 +22,6 @@ pull_requests:
 matrix:
   fast_finish: true
 for:
-  -
-    matrix:
-      only:
-        - image: Ubuntu
-    install:
-      - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_TOOL_CHAIN}
-      - source $HOME/.cargo/env
   -
     matrix:
       only:
