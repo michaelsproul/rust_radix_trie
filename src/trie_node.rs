@@ -26,15 +26,6 @@ pub struct KeyValue<K, V> {
     pub value: V,
 }
 
-macro_rules! no_children {
-    () => {
-        [
-            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None, None,
-        ]
-    };
-}
-
 impl<K, V> TrieNode<K, V>
 where
     K: TrieKey,
@@ -44,7 +35,7 @@ where
         TrieNode {
             key: NibbleVec::new(),
             key_value: None,
-            children: no_children![],
+            children: Default::default(),
             child_count: 0,
         }
     }
@@ -57,7 +48,7 @@ where
                 key: key,
                 value: value,
             })),
-            children: no_children![],
+            children: Default::default(),
             child_count: 0,
         }
     }
@@ -192,7 +183,7 @@ where
         let key_value = self.key_value.take();
 
         // Children.
-        let mut children = no_children![];
+        let mut children: [Option<Box<TrieNode<K, V>>>; BRANCH_FACTOR] = Default::default();
 
         for (i, child) in self.children.iter_mut().enumerate() {
             if child.is_some() {
