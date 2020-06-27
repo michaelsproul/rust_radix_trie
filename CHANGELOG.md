@@ -1,6 +1,10 @@
 Changelog
 ====
 
+0.2.0:
+    * Update `nibble_vec` to v0.1.0: faster and uses less memory!
+    * Released 28/06/2020
+
 0.1.6:
 
 * Update to Rust 2018, add benchmarking code (#52)

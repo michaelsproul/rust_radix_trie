@@ -28,7 +28,7 @@ Available on [Crates.io][] as [`radix_trie`][radix-crate].
 Just add `radix_trie` to the dependencies section of your `Cargo.toml`, like so:
 
 ```toml
-radix_trie = "0.1"
+radix_trie = "0.2"
 ```
 
 # Contributors
