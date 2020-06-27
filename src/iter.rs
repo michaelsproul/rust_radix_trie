@@ -4,7 +4,9 @@ use std::iter::{FilterMap, FromIterator, Map};
 use std::slice;
 
 use crate::TrieNode;
-use crate::{NibbleVec, SubTrie, Trie, TrieKey};
+use crate::{SubTrie, Trie, TrieKey};
+
+use nibble_vec::Nibblet;
 
 // MY EYES.
 type Child<K, V> = Box<TrieNode<K, V>>;
@@ -84,12 +86,12 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
 
 /// Iterator over the child subtries of a trie.
 pub struct Children<'a, K: 'a, V: 'a> {
-    prefix: NibbleVec,
+    prefix: Nibblet,
     inner: ChildIter<'a, K, V>,
 }
 
 impl<'a, K, V> Children<'a, K, V> {
-    pub fn new(key: NibbleVec, node: &'a TrieNode<K, V>) -> Self {
+    pub fn new(key: Nibblet, node: &'a TrieNode<K, V>) -> Self {
         Children {
             prefix: key,
             inner: node.child_iter(),

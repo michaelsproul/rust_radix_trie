@@ -1,9 +1,11 @@
 //! This module contains the core algorithms.
 
 use crate::keys::{match_keys, KeyMatch};
+use crate::TrieKey;
 use crate::TrieNode;
-use crate::{NibbleVec, TrieKey};
 use std::borrow::Borrow;
+
+use nibble_vec::Nibblet;
 
 use self::DescendantResult::*;
 
@@ -11,18 +13,19 @@ impl<K, V> TrieNode<K, V>
 where
     K: TrieKey,
 {
-    pub fn get(&self, nv: &NibbleVec) -> Option<&TrieNode<K, V>> {
+    #[inline]
+    pub fn get(&self, nv: &Nibblet) -> Option<&TrieNode<K, V>> {
         iterative_get(self, nv)
     }
-
-    pub fn get_mut(&mut self, nv: &NibbleVec) -> Option<&mut TrieNode<K, V>> {
+    #[inline]
+    pub fn get_mut(&mut self, nv: &Nibblet) -> Option<&mut TrieNode<K, V>> {
         iterative_get_mut(self, nv)
     }
-
-    pub fn insert(&mut self, key: K, value: V, nv: NibbleVec) -> Option<V> {
+    #[inline]
+    pub fn insert(&mut self, key: K, value: V, nv: Nibblet) -> Option<V> {
         iterative_insert(self, key, value, nv)
     }
-
+    #[inline]
     pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
@@ -30,16 +33,16 @@ where
     {
         recursive_remove(self, key)
     }
-
-    pub fn get_ancestor(&self, nv: &NibbleVec) -> Option<(&TrieNode<K, V>, usize)> {
+    #[inline]
+    pub fn get_ancestor(&self, nv: &Nibblet) -> Option<(&TrieNode<K, V>, usize)> {
         get_ancestor(self, nv)
     }
-
-    pub fn get_raw_ancestor(&self, nv: &NibbleVec) -> (&TrieNode<K, V>, usize) {
+    #[inline]
+    pub fn get_raw_ancestor(&self, nv: &Nibblet) -> (&TrieNode<K, V>, usize) {
         get_raw_ancestor(self, nv)
     }
-
-    pub fn get_raw_descendant<'a>(&'a self, nv: &NibbleVec) -> Option<DescendantResult<'a, K, V>> {
+    #[inline]
+    pub fn get_raw_descendant<'a>(&'a self, nv: &Nibblet) -> Option<DescendantResult<'a, K, V>> {
         get_raw_descendant(self, nv)
     }
 }
@@ -50,7 +53,8 @@ macro_rules! get_func {
         trie_type: $trie_type:ty,
         mutability: $($mut_:tt)*
     ) => {id!{
-        fn $name<'a, K, V>(trie: $trie_type, nv: &NibbleVec) -> Option<$trie_type> {
+        #[inline]
+        fn $name<'a, K, V>(trie: $trie_type, nv: &Nibblet) -> Option<$trie_type> {
             if nv.len() == 0 {
                 return Some(trie);
             }
@@ -85,12 +89,8 @@ macro_rules! get_func {
 get_func!(name: iterative_get, trie_type: &'a TrieNode<K, V>, mutability: );
 get_func!(name: iterative_get_mut, trie_type: &'a mut TrieNode<K, V>, mutability: mut);
 
-fn iterative_insert<K, V>(
-    trie: &mut TrieNode<K, V>,
-    key: K,
-    value: V,
-    mut nv: NibbleVec,
-) -> Option<V>
+#[inline]
+fn iterative_insert<K, V>(trie: &mut TrieNode<K, V>, key: K, value: V, mut nv: Nibblet) -> Option<V>
 where
     K: TrieKey,
 {
@@ -146,6 +146,7 @@ where
 }
 
 // TODO: clean this up and make it iterative.
+#[inline]
 fn recursive_remove<K, Q: ?Sized, V>(trie: &mut TrieNode<K, V>, key: &Q) -> Option<V>
 where
     K: TrieKey,
@@ -192,7 +193,7 @@ where
         None => None,
     }
 }
-
+#[inline]
 fn get_merge_child<K, V>(trie: &mut TrieNode<K, V>) -> Box<TrieNode<K, V>>
 where
     K: TrieKey,
@@ -206,13 +207,14 @@ where
 }
 
 // Tail-recursive remove function used by `recursive_remove`.
+#[inline]
 fn rec_remove<K, Q: ?Sized, V>(
     parent: &mut TrieNode<K, V>,
     mut middle: Box<TrieNode<K, V>>,
     prev_bucket: usize,
     key: &Q,
     depth: usize,
-    nv: &NibbleVec,
+    nv: &Nibblet,
 ) -> Option<V>
 where
     K: TrieKey,
@@ -263,10 +265,10 @@ where
         None => None,
     }
 }
-
+#[inline]
 fn get_ancestor<'a, K, V>(
     trie: &'a TrieNode<K, V>,
-    nv: &NibbleVec,
+    nv: &Nibblet,
 ) -> Option<(&'a TrieNode<K, V>, usize)>
 where
     K: TrieKey,
@@ -306,11 +308,8 @@ where
         }
     }
 }
-
-fn get_raw_ancestor<'a, K, V>(
-    trie: &'a TrieNode<K, V>,
-    nv: &NibbleVec,
-) -> (&'a TrieNode<K, V>, usize)
+#[inline]
+fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &Nibblet) -> (&'a TrieNode<K, V>, usize)
 where
     K: TrieKey,
 {
@@ -351,12 +350,12 @@ where
 // method.
 pub enum DescendantResult<'a, K: 'a, V: 'a> {
     NoModification(&'a TrieNode<K, V>),
-    ExtendKey(&'a TrieNode<K, V>, usize, &'a NibbleVec),
+    ExtendKey(&'a TrieNode<K, V>, usize, &'a Nibblet),
 }
-
+#[inline]
 fn get_raw_descendant<'a, K, V>(
     trie: &'a TrieNode<K, V>,
-    nv: &NibbleVec,
+    nv: &Nibblet,
 ) -> Option<DescendantResult<'a, K, V>> {
     if nv.len() == 0 {
         return Some(NoModification(trie));
