@@ -16,6 +16,8 @@ pub use nibble_vec::NibbleVec;
 pub use trie_common::TrieCommon;
 use trie_node::TrieNode;
 
+use nibble_vec::Nibblet;
+
 #[macro_use]
 mod macros;
 pub mod iter;
@@ -57,14 +59,14 @@ pub struct Trie<K, V> {
 /// Immutable view of a sub-tree a larger trie.
 #[derive(Debug)]
 pub struct SubTrie<'a, K: 'a, V: 'a> {
-    prefix: NibbleVec,
+    prefix: Nibblet,
     node: &'a TrieNode<K, V>,
 }
 
 /// Mutable view of a sub-tree of a larger trie.
 #[derive(Debug)]
 pub struct SubTrieMut<'a, K: 'a, V: 'a> {
-    prefix: NibbleVec,
+    prefix: Nibblet,
     length: &'a mut usize,
     node: &'a mut TrieNode<K, V>,
 }

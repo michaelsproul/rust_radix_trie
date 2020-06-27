@@ -1,13 +1,15 @@
 use crate::keys::*;
-use crate::{NibbleVec, SubTrie, SubTrieMut, BRANCH_FACTOR};
+use crate::{SubTrie, SubTrieMut, BRANCH_FACTOR};
 use std::borrow::Borrow;
 use std::default::Default;
+
+use nibble_vec::Nibblet;
 
 #[derive(Debug, Clone)]
 pub struct TrieNode<K, V> {
     /// Key fragments/bits associated with this node, such that joining the keys from all
     /// parent nodes and this node is equal to the bit-encoding of this node's key.
-    pub key: NibbleVec,
+    pub key: Nibblet,
 
     /// The key and value stored at this node.
     pub key_value: Option<Box<KeyValue<K, V>>>,
@@ -40,9 +42,10 @@ where
     K: TrieKey,
 {
     /// Create a value-less, child-less TrieNode.
+    #[inline]
     pub fn new() -> TrieNode<K, V> {
         TrieNode {
-            key: NibbleVec::new(),
+            key: Nibblet::new(),
             key_value: None,
             children: no_children![],
             child_count: 0,
@@ -50,7 +53,8 @@ where
     }
 
     /// Create a TrieNode with no children.
-    pub fn with_key_value(key_fragments: NibbleVec, key: K, value: V) -> TrieNode<K, V> {
+    #[inline]
+    pub fn with_key_value(key_fragments: Nibblet, key: K, value: V) -> TrieNode<K, V> {
         TrieNode {
             key: key_fragments,
             key_value: Some(Box::new(KeyValue {
@@ -63,16 +67,19 @@ where
     }
 
     /// Get the key stored at this node, if any.
+    #[inline]
     pub fn key(&self) -> Option<&K> {
         self.key_value.as_ref().map(|kv| &kv.key)
     }
 
     /// Get the value stored at this node, if any.
+    #[inline]
     pub fn value(&self) -> Option<&V> {
         self.key_value.as_ref().map(|kv| &kv.value)
     }
 
     /// Get a mutable reference to the value stored at this node, if any.
+    #[inline]
     pub fn value_mut(&mut self) -> Option<&mut V> {
         self.key_value.as_mut().map(|kv| &mut kv.value)
     }
@@ -80,7 +87,8 @@ where
     /// Get the value whilst checking a key match.
     ///
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
-    /// form *must* match those for the key type
+    /// form *must* match those for the key type.
+    #[inline]
     pub fn value_checked<Q: ?Sized>(&self, key: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
@@ -95,7 +103,8 @@ where
     /// Get a mutable value whilst checking a key match.
     ///
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
-    /// form *must* match those for the key type
+    /// form *must* match those for the key type.
+    #[inline]
     pub fn value_checked_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
@@ -108,6 +117,7 @@ where
     }
 
     /// Compute the number of keys and values in this node's subtrie.
+    #[inline]
     pub fn compute_size(&self) -> usize {
         let mut size = if self.key_value.is_some() { 1 } else { 0 };
 
@@ -122,6 +132,7 @@ where
     }
 
     /// Add a child at the given index, given that none exists there already.
+    #[inline]
     pub fn add_child(&mut self, idx: usize, node: Box<TrieNode<K, V>>) {
         debug_assert!(self.children[idx].is_none());
         self.child_count += 1;
@@ -129,6 +140,7 @@ where
     }
 
     /// Remove a child at the given index, if it exists.
+    #[inline]
     pub fn take_child(&mut self, idx: usize) -> Option<Box<TrieNode<K, V>>> {
         self.children[idx].take().map(|node| {
             self.child_count -= 1;
@@ -137,6 +149,7 @@ where
     }
 
     /// Helper function for removing the single child of a node.
+    #[inline]
     pub fn take_only_child(&mut self) -> Box<TrieNode<K, V>> {
         debug_assert_eq!(self.child_count, 1);
         for i in 0..BRANCH_FACTOR {
@@ -148,6 +161,7 @@ where
     }
 
     /// Set the key and value of a node, given that it currently lacks one.
+    #[inline]
     pub fn add_key_value(&mut self, key: K, value: V) {
         debug_assert!(self.key_value.is_none());
         self.key_value = Some(Box::new(KeyValue { key, value }));
@@ -158,6 +172,7 @@ where
     ///
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
+    #[inline]
     pub fn take_value<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
@@ -170,6 +185,7 @@ where
     }
 
     /// Replace a value, returning the previous value if there was one.
+    #[inline]
     pub fn replace_value(&mut self, key: K, value: V) -> Option<V> {
         // TODO: optimise this?
         let previous = self.take_value(&key);
@@ -178,12 +194,14 @@ where
     }
 
     /// Get a reference to this node if it has a value.
+    #[inline]
     pub fn as_value_node(&self) -> Option<&TrieNode<K, V>> {
         self.key_value.as_ref().map(|_| self)
     }
 
     /// Split a node at a given index in its key, transforming it into a prefix node of its
     /// previous self.
+    #[inline]
     pub fn split(&mut self, idx: usize) {
         // Extract all the parts of the suffix node, starting with the key.
         let key = self.key.split(idx);
@@ -213,17 +231,17 @@ where
             child_count,
         }));
     }
-
-    pub fn as_subtrie(&self, prefix: NibbleVec) -> SubTrie<K, V> {
+    #[inline]
+    pub fn as_subtrie(&self, prefix: Nibblet) -> SubTrie<K, V> {
         SubTrie {
             prefix: prefix,
             node: self,
         }
     }
-
+    #[inline]
     pub fn as_subtrie_mut<'a>(
         &'a mut self,
-        prefix: NibbleVec,
+        prefix: Nibblet,
         length: &'a mut usize,
     ) -> SubTrieMut<'a, K, V> {
         SubTrieMut {
@@ -236,7 +254,7 @@ where
     /// Check the integrity of a trie subtree (quite costly).
     /// Return true and the size of the subtree if all checks are successful,
     /// or false and a junk value if any test fails.
-    pub fn check_integrity_recursive(&self, prefix: &NibbleVec) -> (bool, usize) {
+    pub fn check_integrity_recursive(&self, prefix: &Nibblet) -> (bool, usize) {
         let mut sub_tree_size = 0;
         let is_root = prefix.len() == 0;
 
