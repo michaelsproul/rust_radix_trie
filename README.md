@@ -40,6 +40,7 @@ Made by:
 * Arthur Carcano ([@NougatRillettes](https://github.com/NougatRillettes))
 * Devin Ragotzy ([@DevinR528](https://github.com/DevinR528))
 * [@hanabi1224](https://github.com/hanabi1224)
+* Jakob Dalsgaard ([@jakobdalsgaard](https://github.com/jakobdalsgaard))
 * Michael Sproul ([@michaelsproul](https://github.com/michaelsproul))
 * Robin Lambertz ([@roblabla](https://github.com/roblabla))
 * Sergey ([@Albibek](https://github.com/Albibek))

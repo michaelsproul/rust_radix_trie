@@ -1,6 +1,10 @@
 Changelog
 ====
 
+0.2.1:
+    * Implement `TrieKey` for vectors of integers (#63)
+    * Released 22/10/2020
+
 0.2.0:
     * Update `nibble_vec` to v0.1.0: faster and uses less memory!
     * Released 28/06/2020
