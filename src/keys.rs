@@ -196,6 +196,24 @@ macro_rules! int_keys {
 
 int_keys!(u16, u32, u64, i16, i32, i64, usize, isize);
 
+macro_rules! vec_int_keys {
+  ( $( $t:ty ),* ) => {
+      $(
+      impl TrieKey for Vec<$t> {
+          fn encode_bytes(&self) -> Vec<u8> {
+              let mut v = Vec::<u8>::with_capacity(self.len() * std::mem::size_of::<$t>());
+              for u in self {
+                  v.extend_from_slice(&u.to_be_bytes());
+              }
+              v
+          }
+      }
+      )*
+   };
+}
+
+vec_int_keys!(u16, u32, u64, i16, i32, i64, usize, isize);
+
 #[cfg(test)]
 mod test {
     pub trait DefaultTrieKey {
