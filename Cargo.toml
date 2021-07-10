@@ -32,6 +32,5 @@ harness = false
 bench = false
 
 [badges]
-travis-ci = { repository = "michaelsproul/rust_radix_trie" }
 appveyor = { repository = "michaelsproul/rust_radix_trie" }
 maintenance = { status = "as-is" }
