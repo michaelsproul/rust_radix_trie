@@ -183,10 +183,9 @@ where
     /// Replace a value, returning the previous value if there was one.
     #[inline]
     pub fn replace_value(&mut self, key: K, value: V) -> Option<V> {
-        // TODO: optimise this?
-        let previous = self.take_value(&key);
-        self.add_key_value(key, value);
-        previous
+        let previous =
+            std::mem::replace(&mut self.key_value, Some(Box::new(KeyValue { key, value })));
+        previous.map(|kv| kv.value)
     }
 
     /// Get a reference to this node if it has a value.
