@@ -145,7 +145,6 @@ where
     }
 }
 
-// TODO: clean this up and make it iterative.
 #[inline]
 fn recursive_remove<K, Q: ?Sized, V>(trie: &mut TrieNode<K, V>, key: &Q) -> Option<V>
 where
@@ -181,8 +180,58 @@ where
                     result
                 }
                 KeyMatch::SecondPrefix => {
-                    let depth = child.key.len();
-                    rec_remove(trie, child, bucket, key, depth, &nv)
+                    let mut depth = child.key.len();
+                    let mut prev_bucket = bucket;
+                    let mut parent = trie;
+                    let mut current = child;
+                    loop {
+                        let bucket = nv.get(depth) as usize;
+                        let child = current.take_child(bucket);
+                        parent.add_child(prev_bucket, current);
+                        match child {
+                            Some(mut child) => {
+                                let middle = parent.children[prev_bucket].as_mut().unwrap();
+                                match match_keys(depth, &nv, &child.key) {
+                                    KeyMatch::Full => {
+                                        let result = child.take_value(key);
+
+                                        // If this node has children, keep it.
+                                        if child.child_count != 0 {
+                                            // If removing this node's value has made it a value-less node with a
+                                            // single child, then merge its child.
+                                            let repl = if child.child_count == 1 {
+                                                get_merge_child(&mut *child)
+                                            } else {
+                                                child
+                                            };
+                                            middle.add_child(bucket, repl);
+                                        }
+                                        // Otherwise, if the parent node now only has a single child, merge it.
+                                        else if middle.child_count == 1
+                                            && middle.key_value.is_none()
+                                        {
+                                            let repl = get_merge_child(middle);
+                                            *middle = repl;
+                                        }
+
+                                        return result;
+                                    }
+                                    KeyMatch::SecondPrefix => {
+                                        parent = middle;
+                                        depth += child.key.len();
+                                        current = child;
+                                        prev_bucket = bucket;
+                                        continue;
+                                    }
+                                    KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                                        middle.add_child(bucket, child);
+                                        return None;
+                                    }
+                                }
+                            }
+                            None => return None,
+                        }
+                    }
                 }
                 KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
                     trie.add_child(bucket, child);
@@ -206,65 +255,6 @@ where
     child
 }
 
-// Tail-recursive remove function used by `recursive_remove`.
-#[inline]
-fn rec_remove<K, Q: ?Sized, V>(
-    parent: &mut TrieNode<K, V>,
-    mut middle: Box<TrieNode<K, V>>,
-    prev_bucket: usize,
-    key: &Q,
-    depth: usize,
-    nv: &Nibblet,
-) -> Option<V>
-where
-    K: TrieKey,
-    K: Borrow<Q>,
-    Q: TrieKey,
-{
-    let bucket = nv.get(depth) as usize;
-
-    let child = middle.take_child(bucket);
-    parent.add_child(prev_bucket, middle);
-
-    match child {
-        Some(mut child) => {
-            let middle = parent.children[prev_bucket].as_mut().unwrap();
-            match match_keys(depth, nv, &child.key) {
-                KeyMatch::Full => {
-                    let result = child.take_value(key);
-
-                    // If this node has children, keep it.
-                    if child.child_count != 0 {
-                        // If removing this node's value has made it a value-less node with a
-                        // single child, then merge its child.
-                        let repl = if child.child_count == 1 {
-                            get_merge_child(&mut *child)
-                        } else {
-                            child
-                        };
-                        middle.add_child(bucket, repl);
-                    }
-                    // Otherwise, if the parent node now only has a single child, merge it.
-                    else if middle.child_count == 1 && middle.key_value.is_none() {
-                        let repl = get_merge_child(middle);
-                        *middle = repl;
-                    }
-
-                    result
-                }
-                KeyMatch::SecondPrefix => {
-                    let new_depth = depth + child.key.len();
-                    rec_remove(middle, child, bucket, key, new_depth, nv)
-                }
-                KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
-                    middle.add_child(bucket, child);
-                    None
-                }
-            }
-        }
-        None => None,
-    }
-}
 #[inline]
 fn get_ancestor<'a, K, V>(
     trie: &'a TrieNode<K, V>,
