@@ -110,12 +110,17 @@ where
     /// Compute the number of keys and values in this node's subtrie.
     #[inline]
     pub fn compute_size(&self) -> usize {
-        let mut size = self.key_value.is_some() as usize;
+        let mut size = 0;
+        let mut stack = Vec::new();
+        stack.push(self);
 
-        for child in &self.children {
-            if let Some(ref child) = *child {
-                // TODO: could unroll this recursion
-                size += child.compute_size();
+        while !stack.is_empty() {
+            let top = stack.pop().unwrap();
+            size += top.key_value.is_some() as usize;
+            for child in &top.children {
+                if let Some(ref child) = child {
+                    stack.push(child);
+                }
             }
         }
 
