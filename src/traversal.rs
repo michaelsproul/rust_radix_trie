@@ -94,7 +94,7 @@ fn iterative_insert<K, V>(trie: &mut TrieNode<K, V>, key: K, value: V, mut nv: N
 where
     K: TrieKey,
 {
-    if nv.len() == 0 {
+    if nv.is_empty() {
         return trie.replace_value(key, value);
     }
 
@@ -155,7 +155,7 @@ where
 {
     let nv = key.encode();
 
-    if nv.len() == 0 {
+    if nv.is_empty() {
         return trie.take_value(key);
     }
 
@@ -273,7 +273,7 @@ fn get_ancestor<'a, K, V>(
 where
     K: TrieKey,
 {
-    if nv.len() == 0 {
+    if nv.is_empty() {
         return trie.as_value_node().map(|node| (node, 0));
     }
 
@@ -313,7 +313,7 @@ fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &Nibblet) -> (&'a Tr
 where
     K: TrieKey,
 {
-    if nv.len() == 0 {
+    if nv.is_empty() {
         return (trie, 0);
     }
 
@@ -357,7 +357,7 @@ fn get_raw_descendant<'a, K, V>(
     trie: &'a TrieNode<K, V>,
     nv: &Nibblet,
 ) -> Option<DescendantResult<'a, K, V>> {
-    if nv.len() == 0 {
+    if nv.is_empty() {
         return Some(NoModification(trie));
     }
 
