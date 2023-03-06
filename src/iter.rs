@@ -25,7 +25,7 @@ impl<'a, K, V> Iter<'a, K, V> {
     // TODO: make this private somehow (and same for the other iterators).
     pub fn new(root: &'a TrieNode<K, V>) -> Iter<'a, K, V> {
         Iter {
-            root: root,
+            root,
             root_visited: false,
             stack: vec![],
         }
@@ -105,7 +105,7 @@ impl<'a, K, V> Iterator for Children<'a, K, V> {
     fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
         self.inner.next().map(|node| SubTrie {
             prefix: self.prefix.clone().join(&node.key),
-            node: node,
+            node,
         })
     }
 }

@@ -131,18 +131,14 @@ impl<'a, T: ?Sized + TrieKey> TrieKey for &'a mut T {
 impl TrieKey for i8 {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::with_capacity(1);
-        v.push(*self as u8);
-        v
+        vec![*self as u8]
     }
 }
 
 impl TrieKey for u8 {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::with_capacity(1);
-        v.push(*self);
-        v
+        vec![*self]
     }
 }
 
@@ -168,7 +164,7 @@ where
     T: Eq + Copy,
 {
     fn encode_bytes(&self) -> Vec<u8> {
-        self.as_bytes().encode_bytes()
+        self.as_byte_slice().encode_bytes()
     }
 }
 
@@ -177,7 +173,7 @@ where
     T: Eq + Copy,
 {
     fn encode_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+        self.as_byte_slice().to_vec()
     }
 }
 
@@ -194,7 +190,7 @@ macro_rules! int_keys {
     };
 }
 
-int_keys!(u16, u32, u64, i16, i32, i64, usize, isize);
+int_keys!(u16, u32, u64, u128, i16, i32, i64, i128, usize, isize);
 
 macro_rules! vec_int_keys {
   ( $( $t:ty ),* ) => {
@@ -212,7 +208,25 @@ macro_rules! vec_int_keys {
    };
 }
 
-vec_int_keys!(u16, u32, u64, i16, i32, i64, usize, isize);
+vec_int_keys!(u16, u32, u64, u128, i16, i32, i64, i128, usize, isize);
+
+macro_rules! slice_int_keys {
+  ( $( $t:ty ),* ) => {
+      $(
+      impl TrieKey for [$t] {
+        fn encode_bytes(&self) -> Vec<u8> {
+            let mut v = Vec::<u8>::with_capacity(self.len() * std::mem::size_of::<$t>());
+            for u in self {
+                v.extend_from_slice(&u.to_be_bytes());
+            }
+            v
+        }
+      }
+      )*
+   };
+}
+
+slice_int_keys!(u16, u32, u64, u128, i16, i32, i64, i128, usize, isize);
 
 #[cfg(test)]
 mod test {
