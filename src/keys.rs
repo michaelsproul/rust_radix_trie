@@ -1,6 +1,5 @@
 use endian_type::{BigEndian, LittleEndian};
 use nibble_vec::Nibblet;
-#[cfg(unix)]
 use std::path::{Path, PathBuf};
 
 /// Trait for types which can be used to key a Radix Trie.
