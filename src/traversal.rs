@@ -1,8 +1,8 @@
 //! This module contains the core algorithms.
 
-use crate::keys::{match_keys, KeyMatch};
 use crate::TrieKey;
 use crate::TrieNode;
+use crate::keys::{KeyMatch, match_keys};
 use std::borrow::Borrow;
 
 use nibble_vec::Nibblet;

@@ -1,7 +1,7 @@
 extern crate serde;
 
 use self::serde::ser::SerializeMap;
-use self::serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use self::serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use super::{Trie, TrieCommon, TrieKey};
 use std::fmt::{self, Formatter};
 use std::marker::PhantomData;

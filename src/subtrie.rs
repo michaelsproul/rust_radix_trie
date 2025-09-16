@@ -1,5 +1,5 @@
-use crate::keys::*;
 use crate::TrieNode;
+use crate::keys::*;
 use crate::{SubTrie, SubTrieMut, SubTrieResult};
 use std::borrow::Borrow;
 
