@@ -114,14 +114,14 @@ impl TrieKey for str {
     }
 }
 
-impl<'a, T: ?Sized + TrieKey> TrieKey for &'a T {
+impl<T: ?Sized + TrieKey> TrieKey for &T {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
         (**self).encode_bytes()
     }
 }
 
-impl<'a, T: ?Sized + TrieKey> TrieKey for &'a mut T {
+impl<T: ?Sized + TrieKey> TrieKey for &mut T {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
         (**self).encode_bytes()
