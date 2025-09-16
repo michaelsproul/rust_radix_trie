@@ -168,7 +168,7 @@ where
     T: Eq + Copy,
 {
     fn encode_bytes(&self) -> Vec<u8> {
-        self.as_bytes().encode_bytes()
+        self.as_byte_slice().encode_bytes()
     }
 }
 
@@ -177,7 +177,7 @@ where
     T: Eq + Copy,
 {
     fn encode_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+        self.as_byte_slice().to_vec()
     }
 }
 
