@@ -163,6 +163,20 @@ impl TrieKey for Path {
     }
 }
 
+#[cfg(windows)]
+impl TrieKey for PathBuf {
+    fn encode_bytes(&self) -> Vec<u8> {
+        self.as_os_str().as_encoded_bytes().to_vec()
+    }
+}
+
+#[cfg(windows)]
+impl TrieKey for Path {
+    fn encode_bytes(&self) -> Vec<u8> {
+        self.as_os_str().as_encoded_bytes().to_vec()
+    }
+}
+
 impl<T> TrieKey for LittleEndian<T>
 where
     T: Eq + Copy,
