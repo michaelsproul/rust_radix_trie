@@ -1,8 +1,7 @@
 use endian_type::{BigEndian, LittleEndian};
-use std::ffi::OsString;
-use std::path::{Path, PathBuf};
-
 use nibble_vec::Nibblet;
+#[cfg(unix)]
+use std::path::{Path, PathBuf};
 
 /// Trait for types which can be used to key a Radix Trie.
 ///
@@ -114,14 +113,14 @@ impl TrieKey for str {
     }
 }
 
-impl<'a, T: ?Sized + TrieKey> TrieKey for &'a T {
+impl<T: ?Sized + TrieKey> TrieKey for &T {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
         (**self).encode_bytes()
     }
 }
 
-impl<'a, T: ?Sized + TrieKey> TrieKey for &'a mut T {
+impl<T: ?Sized + TrieKey> TrieKey for &mut T {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
         (**self).encode_bytes()
@@ -149,6 +148,7 @@ impl TrieKey for u8 {
 #[cfg(unix)]
 impl TrieKey for PathBuf {
     fn encode_bytes(&self) -> Vec<u8> {
+        use std::ffi::OsString;
         use std::os::unix::ffi::OsStringExt;
         let str: OsString = self.clone().into();
         str.into_vec()
@@ -238,17 +238,6 @@ mod test {
         #[inline]
         fn encode_bytes(&self) -> Vec<u8> {
             self.clone().into()
-        }
-    }
-
-    pub trait AsTrieKey {
-        fn encode_bytes(&self) -> Vec<u8>;
-    }
-
-    impl<T: AsRef<[u8]> + Clone + PartialEq + Eq> AsTrieKey for &T {
-        #[inline]
-        fn encode_bytes(&self) -> Vec<u8> {
-            self.as_ref().to_vec()
         }
     }
 

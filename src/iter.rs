@@ -25,7 +25,7 @@ impl<'a, K, V> Iter<'a, K, V> {
     // TODO: make this private somehow (and same for the other iterators).
     pub fn new(root: &'a TrieNode<K, V>) -> Iter<'a, K, V> {
         Iter {
-            root: root,
+            root,
             root_visited: false,
             stack: vec![],
         }
@@ -105,14 +105,14 @@ impl<'a, K, V> Iterator for Children<'a, K, V> {
     fn next(&mut self) -> Option<SubTrie<'a, K, V>> {
         self.inner.next().map(|node| SubTrie {
             prefix: self.prefix.clone().join(&node.key),
-            node: node,
+            node,
         })
     }
 }
 
 impl<K, V> TrieNode<K, V> {
     /// Helper function to get all the non-empty children of a node.
-    fn child_iter(&self) -> ChildIter<K, V> {
+    fn child_iter(&self) -> ChildIter<'_, K, V> {
         fn id<K, V>(x: &Option<Child<K, V>>) -> Option<&Child<K, V>> {
             x.as_ref()
         }

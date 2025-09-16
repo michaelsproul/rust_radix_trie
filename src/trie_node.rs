@@ -48,10 +48,7 @@ where
     pub fn with_key_value(key_fragments: Nibblet, key: K, value: V) -> TrieNode<K, V> {
         TrieNode {
             key: key_fragments,
-            key_value: Some(Box::new(KeyValue {
-                key: key,
-                value: value,
-            })),
+            key_value: Some(Box::new(KeyValue { key, value })),
             children: Default::default(),
             child_count: 0,
         }
@@ -133,9 +130,8 @@ where
     /// Remove a child at the given index, if it exists.
     #[inline]
     pub fn take_child(&mut self, idx: usize) -> Option<Box<TrieNode<K, V>>> {
-        self.children[idx].take().map(|node| {
+        self.children[idx].take().inspect(|_| {
             self.child_count -= 1;
-            node
         })
     }
 
@@ -216,18 +212,15 @@ where
         // Insert the collected items below what is now an empty prefix node.
         let bucket = key.get(0) as usize;
         self.children[bucket] = Some(Box::new(TrieNode {
-            key: key,
+            key,
             key_value,
             children,
             child_count,
         }));
     }
     #[inline]
-    pub fn as_subtrie(&self, prefix: Nibblet) -> SubTrie<K, V> {
-        SubTrie {
-            prefix: prefix,
-            node: self,
-        }
+    pub fn as_subtrie(&self, prefix: Nibblet) -> SubTrie<'_, K, V> {
+        SubTrie { prefix, node: self }
     }
     #[inline]
     pub fn as_subtrie_mut<'a>(
@@ -236,8 +229,8 @@ where
         length: &'a mut usize,
     ) -> SubTrieMut<'a, K, V> {
         SubTrieMut {
-            prefix: prefix,
-            length: length,
+            prefix,
+            length,
             node: self,
         }
     }
@@ -247,7 +240,7 @@ where
     /// or false and a junk value if any test fails.
     pub fn check_integrity_recursive(&self, prefix: &Nibblet) -> (bool, usize) {
         let mut sub_tree_size = 0;
-        let is_root = prefix.len() == 0;
+        let is_root = prefix.is_empty();
 
         // Check that no value-less, non-root nodes have only 1 child.
         if !is_root && self.child_count == 1 && self.key_value.is_none() {
@@ -256,7 +249,7 @@ where
         }
 
         // Check that all non-root key vector's have length > 1.
-        if !is_root && self.key.len() == 0 {
+        if !is_root && self.key.is_empty() {
             println!("Key length is 0 at non-root node.");
             return (false, sub_tree_size);
         }
