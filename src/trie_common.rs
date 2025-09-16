@@ -1,5 +1,5 @@
-use crate::iter::*;
 use crate::TrieNode;
+use crate::iter::*;
 use crate::{SubTrie, SubTrieMut, Trie, TrieKey};
 
 use nibble_vec::Nibblet;

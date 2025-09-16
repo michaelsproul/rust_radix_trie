@@ -1,5 +1,5 @@
-use crate::traversal::DescendantResult::*;
 use crate::TrieNode;
+use crate::traversal::DescendantResult::*;
 use crate::{SubTrie, SubTrieMut, Trie, TrieCommon, TrieKey};
 use std::borrow::Borrow;
 

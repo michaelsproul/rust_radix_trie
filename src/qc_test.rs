@@ -1,7 +1,7 @@
 //! Proper testing, with QuickCheck.
 
 use crate::{Trie, TrieCommon, TrieKey};
-use quickcheck::{quickcheck, Arbitrary, Gen};
+use quickcheck::{Arbitrary, Gen, quickcheck};
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 

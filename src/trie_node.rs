@@ -1,5 +1,5 @@
 use crate::keys::*;
-use crate::{SubTrie, SubTrieMut, BRANCH_FACTOR};
+use crate::{BRANCH_FACTOR, SubTrie, SubTrieMut};
 use std::borrow::Borrow;
 use std::default::Default;
 
