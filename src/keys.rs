@@ -227,17 +227,6 @@ mod test {
         }
     }
 
-    pub trait AsTrieKey {
-        fn encode_bytes(&self) -> Vec<u8>;
-    }
-
-    impl<T: AsRef<[u8]> + Clone + PartialEq + Eq> AsTrieKey for &T {
-        #[inline]
-        fn encode_bytes(&self) -> Vec<u8> {
-            self.as_ref().to_vec()
-        }
-    }
-
     macro_rules! encode_bytes {
         ($e:expr) => {
             (&$e).encode_bytes()
