@@ -162,16 +162,19 @@ fn nearest_ancestor_root() {
     let mut trie = Trie::new();
     trie.insert("", 55);
     assert_eq!(trie.get_ancestor_value(&""), Some(&55));
+    assert_eq!(trie.get_ancestor_value_mut(&""), Some(&mut 55));
 }
 
 #[test]
 fn nearest_ancestor() {
-    let trie = test_trie();
+    let mut trie = test_trie();
     assert_eq!(trie.get_ancestor_value(&""), None);
+    assert_eq!(trie.get_ancestor_value_mut(&""), None);
 
     // Test identity prefixes.
-    for &(key, val) in &TEST_DATA {
+    for &(key, mut val) in &TEST_DATA {
         assert_eq!(trie.get_ancestor_value(&key), Some(&val));
+        assert_eq!(trie.get_ancestor_value_mut(&key), Some(&mut val));
     }
 
     assert_eq!(trie.get_ancestor_value(&"abcdefg"), trie.get(&"abcdef"));
@@ -268,6 +271,7 @@ fn get_ancestor_bug() {
     trie.insert("abc", 1);
     trie.insert("abcde", 2);
     assert_eq!(trie.get_ancestor_value(&"abcdz"), Some(&1));
+    assert_eq!(trie.get_ancestor_value_mut(&"abcdz"), Some(&mut 1));
 }
 
 #[test]
