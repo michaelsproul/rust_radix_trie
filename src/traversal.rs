@@ -38,6 +38,10 @@ where
         get_ancestor(self, nv)
     }
     #[inline]
+    pub fn get_ancestor_mut(&mut self, nv: &Nibblet) -> Option<(&mut TrieNode<K, V>, usize)> {
+        get_ancestor_mut(self, nv, 0, true)
+    }
+    #[inline]
     pub fn get_raw_ancestor(&self, nv: &Nibblet) -> (&TrieNode<K, V>, usize) {
         get_raw_ancestor(self, nv)
     }
@@ -307,6 +311,90 @@ where
             return ancestor.map(|anc| (anc, depth));
         }
     }
+}
+#[inline]
+fn get_ancestor_mut<'a, K, V>(
+    trie: &'a mut TrieNode<K, V>,
+    nv: &Nibblet,
+    mut depth: usize,
+    include_current: bool,
+) -> Option<(&'a mut TrieNode<K, V>, usize)>
+where
+    K: TrieKey,
+{
+    if nv.len() <= depth {
+        if include_current {
+            return trie.as_value_node_mut().map(|node| (node, 0))
+        } else {
+            return None
+        }
+    }
+
+    let mut prev = trie;
+    // The ancestor is such that all nodes up to and including `prev` have
+    // already been considered.
+
+    // First, we need to find a valid ancestor.
+    if !include_current || prev.as_value_node().is_none() {
+        loop {
+            let bucket = nv.get(depth) as usize;
+            let current = prev;
+            if let Some(child) = current.children[bucket].as_mut() {
+                match match_keys(depth, nv, &child.key) {
+                    KeyMatch::Full => return child.as_value_node_mut().map(|node| {
+                        let node_key_len = node.key.len();
+                        (node, depth + node_key_len)
+                    }),
+                    KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
+                        return None
+                    }
+                    KeyMatch::SecondPrefix => {
+                        depth += child.key.len();
+                        let is_ancestor = child.as_value_node().is_some();
+                        prev = child;
+                        if is_ancestor {
+                            break
+                        }
+                    }
+                }
+            } else {
+                return None
+            }
+        }
+    }
+
+    let mut ancestor = prev;
+
+    // First ancestor identified (though not necessarily the last)
+    // Now recursively find the final ancestor
+    loop {
+        // I don't like that we traverse twice here, but it seems the only way to satisfy the borrow
+        // checker. Otherwise, we're holding a &mut of ancestor for the lifetime of 'a while also
+        // asking for an Option value with that lifetime. Even though the mutable references are
+        // strictly used in different control flows, Rust's current borrow checker can't deduce that
+        // and so throws an error. We use a common workaround below where we first check for existence
+        // and then fetch it so that control flows are cleanly separated for the borrow checker.
+        if get_ancestor_mut(ancestor, nv, depth, false).is_none() {
+            return Some((ancestor, depth))
+        } else {
+            let (new_ancestor, new_depth) = get_ancestor_mut(ancestor, nv, depth, false).unwrap();
+            ancestor = new_ancestor;
+            depth = new_depth;
+        }
+    }
+
+    // This would be much cleaner, but cannot be done until the Polonius borrow checker is stable
+    /*
+    loop {
+        match get_ancestor_mut(ancestor, nv, depth, false) {
+            Some((new_ancestor, new_depth)) => {
+                ancestor = new_ancestor;
+                depth = new_depth;
+            }
+            None => return Some((ancestor, depth)),
+        }
+    }
+    */
 }
 #[inline]
 fn get_raw_ancestor<'a, K, V>(trie: &'a TrieNode<K, V>, nv: &Nibblet) -> (&'a TrieNode<K, V>, usize)

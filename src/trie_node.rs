@@ -186,6 +186,16 @@ where
         self.key_value.as_ref().map(|_| self)
     }
 
+    /// Get a mutable reference to this node if it has a value.
+    #[inline]
+    pub fn as_value_node_mut(&mut self) -> Option<&mut TrieNode<K, V>> {
+        if self.key_value.is_some() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
     /// Split a node at a given index in its key, transforming it into a prefix node of its
     /// previous self.
     #[inline]
