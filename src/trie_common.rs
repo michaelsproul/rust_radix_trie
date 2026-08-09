@@ -145,7 +145,7 @@ where
     }
     #[inline]
     fn children(self) -> Children<'a, K, V> {
-        Children::new(self.prefix.clone(), self.node)
+        Children::new(self.prefix, self.node)
     }
 }
 
