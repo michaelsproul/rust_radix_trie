@@ -141,6 +141,32 @@ where
             })
     }
 
+    /// Fetch a mutable reference to the closest ancestor node of the given key.
+    ///
+    /// If `key` is encoded as byte-vector `b`, return the node `n` in the tree
+    /// such that `n`'s key's byte-vector is the longest possible prefix of `b`, and `n`
+    /// has a value.
+    ///
+    /// Invariant: `result.is_some() => result.key_value.is_some()`.
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type.
+    #[inline]
+    pub fn get_ancestor_mut<'a, Q: ?Sized>(&'a mut self, key: &Q) -> Option<SubTrieMut<'a, K, V>>
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
+        let mut key_fragments = key.encode();
+        let length_ref = &mut self.length;
+        self.node
+            .get_ancestor_mut(&key_fragments)
+            .map(|(node, node_key_len)| {
+                key_fragments.split(node_key_len);
+                node.as_subtrie_mut(key_fragments, length_ref)
+            })
+    }
+
     /// Fetch the closest ancestor *value* for a given key.
     ///
     /// See `get_ancestor` for precise semantics, this is just a shortcut.
@@ -154,6 +180,21 @@ where
         Q: TrieKey,
     {
         self.get_ancestor(key).and_then(|t| t.node.value())
+    }
+
+    /// Mutably fetch the closest ancestor *value* for a given key.
+    ///
+    /// See `get_ancestor_mut` for precise semantics, this is just a shortcut.
+    ///
+    /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
+    /// form *must* match those for the key type.
+    #[inline]
+    pub fn get_ancestor_value_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
+    where
+        K: Borrow<Q>,
+        Q: TrieKey,
+    {
+        self.get_ancestor_mut(key).and_then(|t| t.node.value_mut())
     }
 
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
