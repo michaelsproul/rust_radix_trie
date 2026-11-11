@@ -478,3 +478,32 @@ fn clone() {
 
     assert_eq!(t1, t2);
 }
+
+#[test]
+fn ref_triekey_forwards_encode() {
+    use nibble_vec::Nibblet;
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct CustomNibbleKey(Vec<u8>);
+
+    impl TrieKey for CustomNibbleKey {
+        fn encode(&self) -> Nibblet {
+            let mut nv = Nibblet::new();
+            for &n in &self.0 {
+                nv.push(n);
+            }
+            nv
+        }
+    }
+
+    let key = CustomNibbleKey(vec![1, 2, 3]);
+    let mut trie = Trie::new();
+    trie.insert(&key, 42);
+    assert_eq!(trie.get(&&key), Some(&42));
+
+    let mut mut_key = CustomNibbleKey(vec![1, 2, 3]);
+    let mut mut_trie = Trie::new();
+    mut_trie.insert(&mut mut_key, 99);
+    assert_eq!(mut_trie.get(&&mut CustomNibbleKey(vec![1, 2, 3])), Some(&99));
+}
+

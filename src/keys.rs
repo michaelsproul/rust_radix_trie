@@ -117,12 +117,22 @@ impl<T: ?Sized + TrieKey> TrieKey for &T {
     fn encode_bytes(&self) -> Vec<u8> {
         (**self).encode_bytes()
     }
+
+    #[inline]
+    fn encode(&self) -> Nibblet {
+        (**self).encode()
+    }
 }
 
 impl<T: ?Sized + TrieKey> TrieKey for &mut T {
     #[inline]
     fn encode_bytes(&self) -> Vec<u8> {
         (**self).encode_bytes()
+    }
+
+    #[inline]
+    fn encode(&self) -> Nibblet {
+        (**self).encode()
     }
 }
 
