@@ -478,3 +478,18 @@ fn clone() {
 
     assert_eq!(t1, t2);
 }
+
+#[test]
+fn check_integrity_rejects_depth_1_invalid_nodes() {
+    let mut trie: Trie<&str, u32> = Trie::new();
+    trie.insert("a", 1);
+    trie.insert("ab", 2);
+
+    // Manually corrupt the depth-1 node "a" by removing its value while it has 1 child.
+    let bucket = "a".encode().get(0) as usize;
+    trie.node.children[bucket].as_mut().unwrap().key_value = None;
+    trie.length -= 1;
+
+    assert!(!trie.check_integrity());
+}
+
