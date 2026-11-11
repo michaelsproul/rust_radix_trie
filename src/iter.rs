@@ -30,6 +30,14 @@ impl<'a, K, V> Iter<'a, K, V> {
             stack: vec![],
         }
     }
+
+    pub(crate) fn empty(root: &'a TrieNode<K, V>) -> Iter<'a, K, V> {
+        Iter {
+            root,
+            root_visited: true,
+            stack: vec![],
+        }
+    }
 }
 
 /// Iterator over the keys of a Trie.
@@ -97,6 +105,13 @@ impl<'a, K, V> Children<'a, K, V> {
             inner: node.child_iter(),
         }
     }
+
+    pub(crate) fn empty(key: Nibblet, node: &'a TrieNode<K, V>) -> Self {
+        Children {
+            prefix: key,
+            inner: node.empty_child_iter(),
+        }
+    }
 }
 
 impl<'a, K, V> Iterator for Children<'a, K, V> {
@@ -118,6 +133,14 @@ impl<K, V> TrieNode<K, V> {
         }
 
         self.children.iter().filter_map(id)
+    }
+
+    fn empty_child_iter(&self) -> ChildIter<'_, K, V> {
+        fn id<K, V>(x: &Option<Child<K, V>>) -> Option<&Child<K, V>> {
+            x.as_ref()
+        }
+
+        self.children[..0].iter().filter_map(id)
     }
 
     /// Get the key and value of a node as a pair.

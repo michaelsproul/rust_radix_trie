@@ -493,3 +493,65 @@ fn check_integrity_rejects_depth_1_invalid_nodes() {
     assert!(!trie.check_integrity());
 }
 
+#[test]
+fn subtrie_mut_remove_descendant() {
+    let mut trie = Trie::new();
+    trie.insert("a", 1);
+    trie.insert("ab", 2);
+
+    let mut sub = trie.subtrie_mut("a").unwrap();
+    assert_eq!(sub.remove("ab"), Ok(Some(2)));
+    assert_eq!(trie.get("ab"), None);
+    assert!(trie.check_integrity());
+}
+
+#[test]
+fn subtrie_mut_remove_descendant_same_nibble_prefix() {
+    let mut trie = Trie::new();
+    trie.insert("a", 1);
+    trie.insert("aa", 2);
+    trie.insert("aaa", 3);
+
+    let mut sub = trie.subtrie_mut("a").unwrap();
+    assert_eq!(sub.remove("aa"), Ok(Some(2)));
+    assert_eq!(trie.get("aa"), None);
+    assert_eq!(trie.get("aaa"), Some(&3));
+    assert!(trie.check_integrity());
+}
+
+#[test]
+fn subtrie_mut_remove_single_child_node() {
+    let mut trie = Trie::new();
+    trie.insert("a", 1);
+    trie.insert("ab", 2);
+    trie.insert("abc", 3);
+
+    {
+        let mut sub = trie.subtrie_mut("ab").unwrap();
+        assert_eq!(sub.remove("ab"), Ok(Some(2)));
+        assert_eq!((&sub).len(), 1);
+        assert_eq!((&sub).value(), None);
+        assert_eq!(sub.get("abc"), Ok(Some(&3)));
+    }
+    assert_eq!(trie.get("ab"), None);
+    assert_eq!(trie.get("abc"), Some(&3));
+    assert!(trie.check_integrity());
+}
+
+#[test]
+fn subtrie_mut_remove_leaf_node() {
+    let mut trie = Trie::new();
+    trie.insert("a", 1);
+    trie.insert("ab", 2);
+
+    {
+        let mut sub = trie.subtrie_mut("ab").unwrap();
+        assert_eq!(sub.remove("ab"), Ok(Some(2)));
+        assert_eq!((&sub).len(), 0);
+        assert!(sub.is_empty());
+    }
+    assert!(trie.subtrie("ab").is_none());
+    assert!(trie.check_integrity());
+}
+
+

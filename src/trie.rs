@@ -110,10 +110,11 @@ where
         Q: TrieKey,
     {
         let key_fragments = key.encode();
-        let length_ref = &mut self.length;
-        self.node
-            .get_mut(&key_fragments)
-            .map(move |node| node.as_subtrie_mut(key_fragments, length_ref))
+        if self.node.get(&key_fragments).is_some() {
+            Some(self.node.as_subtrie_mut(key_fragments, &mut self.length))
+        } else {
+            None
+        }
     }
 
     /// Fetch a reference to the closest ancestor node of the given key.
