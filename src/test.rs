@@ -478,3 +478,83 @@ fn clone() {
 
     assert_eq!(t1, t2);
 }
+
+#[test]
+#[should_panic(expected = "multiple-keys with the same bit representation.")]
+fn subtrie_get_checks_key_equality_on_full_match() {
+    #[derive(Debug, PartialEq, Eq)]
+    struct CollidingKey {
+        id: u8,
+        encoded: Vec<u8>,
+    }
+
+    impl TrieKey for CollidingKey {
+        fn encode_bytes(&self) -> Vec<u8> {
+            self.encoded.clone()
+        }
+    }
+
+    let mut trie = Trie::new();
+    trie.insert(
+        CollidingKey {
+            id: 1,
+            encoded: vec![0xab],
+        },
+        10,
+    );
+
+    let sub = trie
+        .subtrie(&CollidingKey {
+            id: 1,
+            encoded: vec![0xab],
+        })
+        .unwrap();
+    let _ = sub.get(&CollidingKey {
+        id: 2,
+        encoded: vec![0xab],
+    });
+}
+
+#[test]
+#[should_panic(expected = "multiple-keys with the same bit representation.")]
+fn subtrie_get_checks_key_equality_on_descendant_match() {
+    #[derive(Debug, PartialEq, Eq)]
+    struct CollidingKey {
+        id: u8,
+        encoded: Vec<u8>,
+    }
+
+    impl TrieKey for CollidingKey {
+        fn encode_bytes(&self) -> Vec<u8> {
+            self.encoded.clone()
+        }
+    }
+
+    let mut trie = Trie::new();
+    trie.insert(
+        CollidingKey {
+            id: 1,
+            encoded: vec![0xab],
+        },
+        10,
+    );
+    trie.insert(
+        CollidingKey {
+            id: 1,
+            encoded: vec![0xab, 0xcd],
+        },
+        20,
+    );
+
+    let sub = trie
+        .subtrie(&CollidingKey {
+            id: 1,
+            encoded: vec![0xab],
+        })
+        .unwrap();
+    let _ = sub.get(&CollidingKey {
+        id: 2,
+        encoded: vec![0xab, 0xcd],
+    });
+}
+
