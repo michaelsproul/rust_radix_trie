@@ -20,6 +20,7 @@ use nibble_vec::Nibblet;
 
 #[macro_use]
 mod macros;
+mod ancestors;
 pub mod iter;
 mod keys;
 #[cfg(feature = "serde")]

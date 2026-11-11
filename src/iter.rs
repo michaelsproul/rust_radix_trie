@@ -8,6 +8,8 @@ use crate::{SubTrie, Trie, TrieKey};
 
 use nibble_vec::Nibblet;
 
+pub use crate::ancestors::{AllAncestorValues, AllAncestorValuesBytes};
+
 // MY EYES.
 type Child<K, V> = Box<TrieNode<K, V>>;
 type RawChildIter<'a, K, V> = slice::Iter<'a, Option<Child<K, V>>>;

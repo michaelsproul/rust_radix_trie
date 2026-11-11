@@ -1,4 +1,5 @@
 use crate::TrieNode;
+use crate::iter::{AllAncestorValues, AllAncestorValuesBytes};
 use crate::traversal::DescendantResult::*;
 use crate::{SubTrie, SubTrieMut, Trie, TrieCommon, TrieKey};
 use std::borrow::Borrow;
@@ -156,6 +157,20 @@ where
         self.get_ancestor(key).and_then(|t| t.node.value())
     }
 
+    /// Obtain an iterator for all ancestors that are prefixes of `key` sorted by their ascending
+    /// length, including the empty key and exact match if present.
+    ///
+    /// This is therefore a generalization of [`Trie::get_ancestor_value`].
+    ///
+    /// For byte keys, use [`Trie::get_all_ancestor_values_bytes`] for reduced memory allocations.
+    #[inline]
+    pub fn get_all_ancestor_values<Q: TrieKey + ?Sized>(
+        &self,
+        key: &Q,
+    ) -> AllAncestorValues<'_, K, V> {
+        AllAncestorValues::new(&self.node, key.encode())
+    }
+
     /// The key may be any borrowed form of the trie's key type, but TrieKey on the borrowed
     /// form *must* match those for the key type
     #[inline]
@@ -218,6 +233,18 @@ where
     pub fn check_integrity(&self) -> bool {
         let (ok, length) = self.node.check_integrity_recursive(&Nibblet::new());
         ok && length == self.length
+    }
+}
+
+impl<V> Trie<Vec<u8>, V> {
+    /// Specialization of [`Trie::get_all_ancestor_values`] for when keys are bytes. Prefer
+    /// to use this when possible for reduced memory allocation.
+    #[inline]
+    pub fn get_all_ancestor_values_bytes<'a, 'q>(
+        &'a self,
+        key: &'q [u8],
+    ) -> AllAncestorValuesBytes<'a, 'q, V> {
+        AllAncestorValuesBytes::new(&self.node, key)
     }
 }
 
