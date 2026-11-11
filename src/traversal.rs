@@ -280,7 +280,7 @@ where
     let mut prev = trie;
     // The ancestor is such that all nodes upto and including `prev` have
     // already been considered.
-    let mut ancestor = prev.as_value_node();
+    let mut ancestor = prev.as_value_node().map(|node| (node, 0));
     let mut depth = 0;
 
     loop {
@@ -292,19 +292,19 @@ where
                     return child
                         .as_value_node()
                         .map(|node| (node, depth + node.key.len()))
-                        .or_else(|| ancestor.map(|anc| (anc, depth)));
+                        .or(ancestor);
                 }
                 KeyMatch::FirstPrefix | KeyMatch::Partial(_) => {
-                    return ancestor.map(|anc| (anc, depth));
+                    return ancestor;
                 }
                 KeyMatch::SecondPrefix => {
                     depth += child.key.len();
-                    ancestor = child.as_value_node().or(ancestor);
+                    ancestor = child.as_value_node().map(|node| (node, depth)).or(ancestor);
                     prev = child;
                 }
             }
         } else {
-            return ancestor.map(|anc| (anc, depth));
+            return ancestor;
         }
     }
 }

@@ -478,3 +478,18 @@ fn clone() {
 
     assert_eq!(t1, t2);
 }
+
+#[test]
+fn get_ancestor_prefix_after_valueless_branch() {
+    let mut trie = Trie::new();
+    trie.insert("a", 1);
+    trie.insert("ab1", 2);
+    trie.insert("ab2", 3);
+
+    let anc = trie.get_ancestor("ab3").unwrap();
+    assert_eq!(anc.prefix, "a".encode());
+    assert_eq!(anc.get("a"), Ok(Some(&1)));
+    assert_eq!(anc.get("ab1"), Ok(Some(&2)));
+    assert_eq!(anc.get("ab2"), Ok(Some(&3)));
+}
+
