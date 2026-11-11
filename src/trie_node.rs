@@ -239,18 +239,25 @@ where
     /// Return true and the size of the subtree if all checks are successful,
     /// or false and a junk value if any test fails.
     pub fn check_integrity_recursive(&self, prefix: &Nibblet) -> (bool, usize) {
-        let mut sub_tree_size = 0;
-        let is_root = prefix.is_empty();
+        self.check_integrity_recursive_inner(prefix, true)
+    }
 
-        // Check that no value-less, non-root nodes have only 1 child.
-        if !is_root && self.child_count == 1 && self.key_value.is_none() {
-            println!("Value-less node with a single child.");
+    fn check_integrity_recursive_inner(&self, prefix: &Nibblet, is_root: bool) -> (bool, usize) {
+        let mut sub_tree_size = 0;
+
+        // Check that no value-less, non-root nodes have 0 or 1 children.
+        if !is_root && self.child_count <= 1 && self.key_value.is_none() {
+            println!("Value-less node with {} children.", self.child_count);
             return (false, sub_tree_size);
         }
 
-        // Check that all non-root key vector's have length > 1.
+        // Check that all non-root key vectors have length >= 1, and root key is empty.
         if !is_root && self.key.is_empty() {
             println!("Key length is 0 at non-root node.");
+            return (false, sub_tree_size);
+        }
+        if is_root && !self.key.is_empty() {
+            println!("Key length is non-zero at root node.");
             return (false, sub_tree_size);
         }
 
@@ -285,7 +292,10 @@ where
         // Recursively check children.
         for i in 0..BRANCH_FACTOR {
             if let Some(ref child) = self.children[i] {
-                match child.check_integrity_recursive(&trie_key) {
+                if child.key.is_empty() || child.key.get(0) as usize != i {
+                    return (false, sub_tree_size);
+                }
+                match child.check_integrity_recursive_inner(&trie_key, false) {
                     (false, _) => return (false, sub_tree_size),
                     (true, child_size) => sub_tree_size += child_size,
                 }

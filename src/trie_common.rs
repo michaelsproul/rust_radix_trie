@@ -1,5 +1,6 @@
 use crate::TrieNode;
 use crate::iter::*;
+use crate::traversal::DescendantResult::*;
 use crate::{SubTrie, SubTrieMut, Trie, TrieKey};
 
 use nibble_vec::Nibblet;
@@ -130,7 +131,10 @@ where
 {
     #[inline]
     fn trie_node(self) -> &'a TrieNode<K, V> {
-        self.node
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node) | ExtendKey(node, _, _)) => node,
+            None => self.node,
+        }
     }
 }
 
@@ -138,14 +142,43 @@ impl<'a, K: 'a, V: 'a> TrieCommon<'a, K, V> for SubTrieMut<'a, K, V>
 where
     K: TrieKey,
 {
+    #[inline]
+    fn key(self) -> Option<&'a K> {
+        self.node.get(&self.prefix).and_then(TrieNode::key)
+    }
+    #[inline]
+    fn value(self) -> Option<&'a V> {
+        self.node.get(&self.prefix).and_then(TrieNode::value)
+    }
     /// **Computes** from scratch.
     #[inline]
     fn len(self) -> usize {
-        self.node.compute_size()
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node) | ExtendKey(node, _, _)) => node.compute_size(),
+            None => 0,
+        }
+    }
+    #[inline]
+    fn is_leaf(self) -> bool {
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node)) => node.child_count == 0,
+            Some(ExtendKey(_, _, _)) => false,
+            None => true,
+        }
+    }
+    #[inline]
+    fn iter(self) -> Iter<'a, K, V> {
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node) | ExtendKey(node, _, _)) => Iter::new(node),
+            None => Iter::empty(self.node),
+        }
     }
     #[inline]
     fn children(self) -> Children<'a, K, V> {
-        Children::new(self.prefix, self.node)
+        match self.node.get(&self.prefix) {
+            Some(node) => Children::new(self.prefix, node),
+            None => Children::empty(self.prefix, self.node),
+        }
     }
 }
 
@@ -156,7 +189,10 @@ where
 {
     #[inline]
     fn trie_node(self) -> &'b TrieNode<K, V> {
-        self.node
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node) | ExtendKey(node, _, _)) => node,
+            None => self.node,
+        }
     }
 }
 
@@ -165,11 +201,40 @@ where
     K: TrieKey,
 {
     #[inline]
+    fn key(self) -> Option<&'b K> {
+        self.node.get(&self.prefix).and_then(TrieNode::key)
+    }
+    #[inline]
+    fn value(self) -> Option<&'b V> {
+        self.node.get(&self.prefix).and_then(TrieNode::value)
+    }
+    #[inline]
     fn len(self) -> usize {
-        self.node.compute_size()
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node) | ExtendKey(node, _, _)) => node.compute_size(),
+            None => 0,
+        }
+    }
+    #[inline]
+    fn is_leaf(self) -> bool {
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node)) => node.child_count == 0,
+            Some(ExtendKey(_, _, _)) => false,
+            None => true,
+        }
+    }
+    #[inline]
+    fn iter(self) -> Iter<'b, K, V> {
+        match self.node.get_raw_descendant(&self.prefix) {
+            Some(NoModification(node) | ExtendKey(node, _, _)) => Iter::new(node),
+            None => Iter::empty(self.node),
+        }
     }
     #[inline]
     fn children(self) -> Children<'b, K, V> {
-        Children::new(self.prefix.clone(), self.node)
+        match self.node.get(&self.prefix) {
+            Some(node) => Children::new(self.prefix.clone(), node),
+            None => Children::empty(self.prefix.clone(), self.node),
+        }
     }
 }
